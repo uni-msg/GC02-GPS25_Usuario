@@ -1,0 +1,29 @@
+{
+  "name": "gc02-gps25_usuario",
+  "version": "1.0.0",
+  "description": "Este proyecto es un **microservicio backend** desarrollado con **Node.js**, conectado a una base de datos **PostgreSQL**, y diseñado para ser modular, escalable y fácil de desplegar.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/uni-msg/GC02-GPS25_Usuario.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/uni-msg/GC02-GPS25_Usuario/issues"
+  },
+  "homepage": "https://github.com/uni-msg/GC02-GPS25_Usuario#readme",
+  "dependencies": {
+    "@prisma/client": "^6.17.1",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "prisma": "^6.17.1"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10"
+  }
+}

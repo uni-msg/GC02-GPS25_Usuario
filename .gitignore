@@ -112,3 +112,6 @@ temp/
 .vscode-test
 .vscode/
 *.timestamp-*
+
+# Prisma
+/generated/prisma
