@@ -4,6 +4,8 @@
   "description": "Este proyecto es un **microservicio backend** desarrollado con **Node.js**, conectado a una base de datos **PostgreSQL**, y diseñado para ser modular, escalable y fácil de desplegar.",
   "main": "index.js",
   "scripts": {
+    "dev": "nodemon src/index.js",
+    "start": "node src/index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
