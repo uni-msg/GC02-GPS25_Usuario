@@ -18,13 +18,13 @@ model artista {
 }
 
 model usuario {
-  id                        Int                         @id @db.SmallInt
+  id                        Int                         @id @default(autoincrement()) @db.SmallInt
   nombreusuario             String                      @unique @db.VarChar(50)
   nombrereal                String                      @db.VarChar(100)
   contrasenia               String
   correo                    String                      @unique @db.VarChar(70)
   descripcion               String?                     @db.VarChar(255)
-  fecharegistro             DateTime                   @default(now()) @db.Timestamp(6)
+  fecharegistro             DateTime?                   @default(now()) @db.Timestamp(6)
   rutafoto                  String?                     @db.VarChar(255)
   esartista                 Boolean                     @default(false)
   artista                   artista?
@@ -45,7 +45,7 @@ model usuario_cesta_elemento {
 model usuario_desea_elemento {
   idusuario  Int       @db.SmallInt
   idelemento Int       @db.SmallInt
-  fecha      DateTime @default(now()) @db.Timestamp(6)
+  fecha      DateTime? @default(now()) @db.Timestamp(6)
   usuario    usuario   @relation(fields: [idusuario], references: [id], onDelete: NoAction, map: "fk_usuarioelemdes")
 
   @@id([idusuario, idelemento])
@@ -56,7 +56,7 @@ model usuario_favorito_elemento {
   idusuario  Int       @db.SmallInt
   idelemento Int       @db.SmallInt
   tipo       Int       @default(0) @db.SmallInt
-  fecha      DateTime @default(now()) @db.Timestamp(6)
+  fecha      DateTime? @default(now()) @db.Timestamp(6)
   usuario    usuario   @relation(fields: [idusuario], references: [id], onDelete: NoAction, map: "fk_usuarioart")
 
   @@id([idusuario, idelemento, tipo])
@@ -65,7 +65,7 @@ model usuario_favorito_elemento {
 model usuario_tiene_elemento {
   idusuario  Int       @db.SmallInt
   idelemento Int       @db.SmallInt
-  fecha      DateTime @default(now()) @db.Timestamp(6)
+  fecha      DateTime? @default(now()) @db.Timestamp(6)
   usuario    usuario   @relation(fields: [idusuario], references: [id], onDelete: NoAction, map: "fk_usuarioelemtie")
 
   @@id([idusuario, idelemento])
