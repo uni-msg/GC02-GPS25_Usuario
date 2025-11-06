@@ -1,6 +1,7 @@
 {
   "name": "gc02-gps25_usuario",
   "version": "1.0.0",
+  "type": "module",
   "description": "Este proyecto es un **microservicio backend** desarrollado con **Node.js**, conectado a una base de datos **PostgreSQL**, y diseñado para ser modular, escalable y fácil de desplegar.",
   "main": "server.js",
   "scripts": {

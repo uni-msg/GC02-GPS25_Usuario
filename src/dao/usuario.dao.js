@@ -11,7 +11,7 @@ export const UsuarioDAO = {
     return prisma.usuario.findUnique({ where: { id } });
   },
 
-  async create(data) {
-    return prisma.usuario.create({ data });
+  async create(data,tx = prisma) {
+    return tx.usuario.create({ data });
   },
 };

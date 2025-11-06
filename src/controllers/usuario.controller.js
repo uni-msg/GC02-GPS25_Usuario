@@ -13,12 +13,7 @@ export const UsuarioController = {
   async createUsuario(req, res) {
     try {
       //Por ahora prueba a devolver 1 pero debe verificar el token
-      const newUser = req.body;
-      const data = await UsuarioService.createUsuario(newUser);
-
-      if (!data) {
-        return res.status(404).json({ error: 'Usuario no encontrado' });
-      }
+      const data = await UsuarioService.createUsuario(req.body);
       res.status(201).json(data);
     } catch (error) {
       console.error(error);
@@ -28,7 +23,7 @@ export const UsuarioController = {
   async getUsuarioById(req, res) {
     try {
       //Por ahora prueba a devolver 1 pero debe verificar el token
-      const id = 1;
+      const id = parseInt(req.param.id);
       const data = await UsuarioService.obtenerUsuario(id);
 
       if (!data) {
@@ -38,6 +33,28 @@ export const UsuarioController = {
     } catch (error) {
       console.error(error);
       res.status(500).json({ error: 'Error al obtener usuario' });
+    }
+  },
+  async getLogin(req, res) {
+    try {
+      const data = await UsuarioService.obtenerUsuario(parseInt(req.user.uid));
+
+      if (!data) {
+        return res.status(404).json({ error: 'Usuario no encontrado' });
+      }
+      res.status(200).json(data);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: 'Error al obtener usuario' });
+    }
+  },
+  async getLogout(req, res) {
+    try {
+      const data = await UsuarioService.logout(req.user.uid);
+      res.status(200).json(data);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: 'Error al obtener eliminar el token' });
     }
   }
 };
