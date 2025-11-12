@@ -2,7 +2,7 @@ import prisma from '../config/database.js';
 
 export const CompradoDAO = {
   /**
-   * 📦 Crear un nuevo registro de compra (usuario tiene elemento)
+   *  Crear un nuevo registro de compra (usuario tiene elemento)
    * @param {Object} data { idusuario, idelemento, fecha? }
    */  
   async create(idusuario, tx = prisma) {
@@ -39,7 +39,7 @@ export const CompradoDAO = {
   },
 
   /**
-   * 🔍 Buscar todos los elementos comprados por un usuario
+   *  Buscar todos los elementos comprados por un usuario
    * @param {number} idusuario - ID del usuario
    * @returns {Promise<Array>} Lista de elementos comprados
    */
@@ -56,7 +56,7 @@ export const CompradoDAO = {
   },
 
   /**
-   * 🔍 Buscar si un usuario ya tiene un elemento concreto
+   *  Buscar si un usuario ya tiene un elemento concreto
    * @param {number} idusuario
    * @param {number} idelemento
    */
@@ -67,7 +67,7 @@ export const CompradoDAO = {
   },
 
   /**
-   * 🧾 Obtener todos los registros (solo para admin o debugging)
+   *  Obtener todos los registros (solo para admin o debugging)
    */
   async findAll() {
     return prisma.usuario_tiene_elemento.findMany({

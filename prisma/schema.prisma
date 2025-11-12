@@ -14,7 +14,7 @@ model artista {
   oyentes    Int     @default(0)
   valoracion Decimal @default(0) @db.Decimal(2, 1)
   idgenero   Int     @db.SmallInt
-  usuario    usuario @relation(fields: [idusuario], references: [id], onDelete: NoAction, map: "fk_ususarioartista")
+  usuario    usuario @relation(fields: [idusuario], references: [id], onDelete: Cascade, map: "fk_ususarioartista")
 }
 
 model usuario {
@@ -37,7 +37,7 @@ model usuario {
 model usuario_cesta_elemento {
   idusuario  Int     @db.SmallInt
   idelemento Int     @db.SmallInt
-  usuario    usuario @relation(fields: [idusuario], references: [id], onDelete: NoAction, map: "fk_usuarioelemcom")
+  usuario    usuario @relation(fields: [idusuario], references: [id], onDelete: Cascade, map: "fk_usuarioelemcom")
 
   @@id([idusuario, idelemento])
 }
@@ -46,7 +46,7 @@ model usuario_desea_elemento {
   idusuario  Int       @db.SmallInt
   idelemento Int       @db.SmallInt
   fecha      DateTime? @default(now()) @db.Timestamp(6)
-  usuario    usuario   @relation(fields: [idusuario], references: [id], onDelete: NoAction, map: "fk_usuarioelemdes")
+  usuario    usuario   @relation(fields: [idusuario], references: [id], onDelete: Cascade, map: "fk_usuarioelemdes")
 
   @@id([idusuario, idelemento])
 }
@@ -57,7 +57,7 @@ model usuario_favorito_elemento {
   idelemento Int       @db.SmallInt
   tipo       Int       @default(0) @db.SmallInt
   fecha      DateTime? @default(now()) @db.Timestamp(6)
-  usuario    usuario   @relation(fields: [idusuario], references: [id], onDelete: NoAction, map: "fk_usuarioart")
+  usuario    usuario   @relation(fields: [idusuario], references: [id], onDelete: Cascade, map: "fk_usuarioart")
 
   @@id([idusuario, idelemento, tipo])
 }
@@ -66,7 +66,7 @@ model usuario_tiene_elemento {
   idusuario  Int       @db.SmallInt
   idelemento Int       @db.SmallInt
   fecha      DateTime? @default(now()) @db.Timestamp(6)
-  usuario    usuario   @relation(fields: [idusuario], references: [id], onDelete: NoAction, map: "fk_usuarioelemtie")
+  usuario    usuario   @relation(fields: [idusuario], references: [id], onDelete: Cascade, map: "fk_usuarioelemtie")
 
   @@id([idusuario, idelemento])
 }

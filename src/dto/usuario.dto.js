@@ -1,11 +1,23 @@
 export class UsuarioDTO {
-  constructor({ id, nombreusuario, nombrereal, correo, descripcion, rutafoto, esartista }) {
-    this.id = id;
+  constructor({
+    id,
+    nombreusuario,
+    nombrereal,
+    contrasenia,
+    correo,
+    descripcion,
+    fecharegistro,
+    rutafoto,
+    esartista,
+  }) {
+    this.id = id ?? null;
     this.nombreusuario = nombreusuario;
     this.nombrereal = nombrereal;
+    this.contrasenia = contrasenia ?? null; // si no pasa nada queda como null
     this.correo = correo;
-    this.descripcion = descripcion;
-    this.rutafoto = rutafoto;
-    this.esartista = esartista;
+    this.descripcion = descripcion ?? null;
+    this.fecharegistro = fecharegistro ? new Date(fecharegistro) : null;
+    this.rutafoto = rutafoto ?? null;
+    this.esartista = esartista ?? false;
   }
 }

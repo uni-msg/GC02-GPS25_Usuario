@@ -10,6 +10,7 @@ export const UsuarioController = {
       res.status(500).json({ error: 'Error al obtener usuarios' });
     }
   },
+
   async createUsuario(req, res) {
     try {
       //Por ahora prueba a devolver 1 pero debe verificar el token
@@ -20,6 +21,7 @@ export const UsuarioController = {
       res.status(500).json({ error: 'Error al obtener usuario' });
     }
   },
+
   async getUsuarioById(req, res) {
     try {
       //Por ahora prueba a devolver 1 pero debe verificar el token
@@ -35,6 +37,7 @@ export const UsuarioController = {
       res.status(500).json({ error: 'Error al obtener usuario' });
     }
   },
+
   async getLogin(req, res) {
     try {
       const data = await UsuarioService.obtenerUsuario(parseInt(req.user.uid));
@@ -48,6 +51,7 @@ export const UsuarioController = {
       res.status(500).json({ error: 'Error al obtener usuario' });
     }
   },
+
   async getLogout(req, res) {
     try {
       const data = await UsuarioService.logout(req.user.uid);
@@ -56,5 +60,27 @@ export const UsuarioController = {
       console.error(error);
       res.status(500).json({ error: 'Error al obtener eliminar el token' });
     }
+  },
+
+  async updateUsuario(req, res) {
+    try {
+      //Por ahora prueba a devolver 1 pero debe verificar el token
+      const data = await UsuarioService.updateUsuario(req.body);
+      res.status(200).json(data);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: 'Error al obtener usuario' });
+    }
+  },
+
+  async deleteUsuario(req, res) {
+    try {
+      const data = await UsuarioService.deleteUsuario(req.user.uid);
+      res.status(204).json(data);
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({ error: 'Error al obtener usuario' });
+    }
   }
+  
 };

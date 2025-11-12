@@ -14,4 +14,16 @@ export const UsuarioDAO = {
   async create(data,tx = prisma) {
     return tx.usuario.create({ data });
   },
+
+  async update(data, tx = prisma) {
+    const { id, ...updateData } = data; //asi quitamos para que no sobreescriba el id
+    return tx.usuario.update({
+      where: { id },
+      data: updateData,
+    });
+  },
+
+  async delete(id, tx = prisma) {
+    return tx.usuario.delete({ where: { id: Number(id) }, });
+  }
 };

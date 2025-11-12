@@ -14,6 +14,17 @@ export const verifyFirebaseToken = async (req,res,next) => {
     //console.log(decodedToken);
     (req).user = decodedToken; // guarda los datos del usuario en req.user
 
+    // Comprobar si hay un parámetro "id" o "idusuario"
+    const idParam = req.params?.id || req.params?.idusuario || req.body?.idusuario ;
+    if (idParam) {
+      if (String(idParam) !== String(decodedToken.uid)) {
+        return res.status(403).json({
+          message: "Acceso denegado: el ID del parámetro no coincide con el usuario autenticado",
+        });
+      }
+    }
+
+
     next(); // MUY IMPORTANTE: DEJA A QUE LLEGUE EL ENDPOINT
   } catch (error) { //Cualquier error sera PROHIBIDO
     console.error("Error al verificar token:", error);
