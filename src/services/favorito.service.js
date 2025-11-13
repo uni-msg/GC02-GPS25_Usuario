@@ -74,6 +74,9 @@ export const FavoritoService = {
    */
   async createFavorito(data) {
     let tipo = [data.tipo];
+
+    // TODO si necesito que se verifique si existe el artista antes de hacerlo
+
     const existe = await FavoritoDAO.findOne(data.idusuario, data.idelemento, tipo);
     if (existe) {
       throw new Error('El elemento ya está en la cesta del usuario.');
