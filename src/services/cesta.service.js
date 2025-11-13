@@ -4,7 +4,7 @@ import { UsuarioCestaElementoDTO } from '../dto/relacion.dto.js';
 
 export const CestaService = {
   /**
-   * 📋 Obtiene la cesta completa de un usuario
+   * Obtiene la cesta completa de un usuario
    * @param {number} idusuario
    * @returns {Promise<CestaDTO>}
    */
@@ -31,21 +31,6 @@ export const CestaService = {
   },
 
   /**
-   * Agrega un elemento a la cesta del usuario
-   * @param {UsuarioCestaElementoDTO} data
-   * @returns {Promise<UsuarioCestaElementoDTO>}
-   */
-  async createItemCesta(data) {
-    const existe = await CestaDAO.findOne(data.idusuario, data.idelemento);
-    if (existe) {
-      throw new Error('El elemento ya está en la cesta del usuario.');
-    }
-
-    const creado = await CestaDAO.create(data);
-    return new UsuarioCestaElementoDTO(creado);
-  },
-
-  /**
    * Comprueba si un elemento ya está en la cesta del usuario
    * @param {number} idusuario
    * @param {number} idelemento
@@ -68,5 +53,20 @@ export const CestaService = {
 
     const eliminado = await CestaDAO.delete(idusuario, idelemento);
     return new UsuarioCestaElementoDTO(eliminado);
+  },
+
+  /**
+   * Agrega un elemento a la cesta del usuario
+   * @param {UsuarioCestaElementoDTO} data
+   * @returns {Promise<UsuarioCestaElementoDTO>}
+   */
+  async createItemCesta(data) {
+    const existe = await CestaDAO.findOne(data.idusuario, data.idelemento);
+    if (existe) {
+      throw new Error('El elemento ya está en la cesta del usuario.');
+    }
+
+    const creado = await CestaDAO.create(data);
+    return new UsuarioCestaElementoDTO(creado);
   },
 };

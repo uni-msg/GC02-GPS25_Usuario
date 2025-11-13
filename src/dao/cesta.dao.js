@@ -13,16 +13,6 @@ export const CestaDAO = {
   },
 
   /**
-   *  Crear un nuevo registro de cesta (usuario cesta elemento)
-   * @param {Object} data UsuarioCestaElementoDTO
-   */  
-  async create(data) {
-      return await prisma.usuario_cesta_elemento.create({
-        data,
-      });
-  },
-
-  /**
    * Buscar si un usuario ya tiene un elemento en la cesta
    * @param {number} idusuario
    * @param {number} idelemento
@@ -40,6 +30,16 @@ export const CestaDAO = {
   async delete(idusuario, idelemento) {
       return await prisma.usuario_cesta_elemento.delete({
         where: { idusuario_idelemento: { idusuario, idelemento } },
+      });
+  },
+
+  /**
+   *  Crear un nuevo registro de cesta (usuario cesta elemento)
+   * @param {Object} data UsuarioCestaElementoDTO
+   */  
+  async create(data) {
+      return await prisma.usuario_cesta_elemento.create({
+        data,
       });
   },
 };
