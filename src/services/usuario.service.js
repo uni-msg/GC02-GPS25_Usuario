@@ -1,13 +1,18 @@
 //Orquesta lo logica del negocio (validar, transformas, DAO)
 import { UsuarioDAO } from '../dao/usuario.dao.js';
+import { ArtistaDAO } from '../dao/artista.dao.js';
 import { UsuarioDTO } from '../dto/usuario.dto.js';
+import { ArtistaDTO } from '../dto/artista.dto.js';
 import prisma from '../config/database.js';
 import { firebaseAdmin } from "../config/firebase.js";
+import { separarDataUsuarioArtista } from "../utils/separarDataUsuarioArtista.js"
 
 export const UsuarioService = {
   async listarUsuarios() {
     const usuarios = await UsuarioDAO.findAll();
-    return usuarios.map(u => new UsuarioDTO(u));
+    return usuarios.map(u => {
+      return u.esartista ? new ArtistaDTO(u) : new UsuarioDTO(u);
+    });
   },
 
   async createUsuario(data) {
@@ -15,17 +20,30 @@ export const UsuarioService = {
       let firebaseUser = null;
 
       try {
-        // Asegurar que no venga ID desde el cliente
-        data.id = undefined;
-        const usuario = await UsuarioDAO.create(data,tx);
-        console.log(usuario)
+        // Asegurar que no venga ID desde el cliente y separamos los datos de usuario y artista
+        const [usuarioData, artistaData] = separarDataUsuarioArtista(data, data.esartista);
+        const usuario = await UsuarioDAO.create(usuarioData,tx);
+        let artista;
+        if(artistaData){
+          artistaData.idusuario = usuario.id; 
+          artista = await ArtistaDAO.create(artistaData,tx)
+        }
+        //console.log(usuario)
         firebaseUser = await firebaseAdmin.auth().createUser({
           uid: String(usuario.id),
           email: usuario.correo,
           password: data.contrasenia,
           displayName: usuario.nombreusuario
         });
-
+        
+        if(artistaData){
+          const userart = {
+            ...usuario,
+            ...artista,
+            genero: data.genero ?? null
+          };
+          return new ArtistaDTO(userart);
+        }
         return new UsuarioDTO(usuario);
       } catch (error) {
         console.error("Error en creación de usuario:", error);
@@ -49,6 +67,10 @@ export const UsuarioService = {
   async obtenerUsuario(id) {
     const usuario = await UsuarioDAO.findById(id);
     if (!usuario) return null;
+
+    if(usuario.esartista)
+      return new ArtistaDTO(usuario);
+
     return new UsuarioDTO(usuario);
   },
 
@@ -62,9 +84,25 @@ export const UsuarioService = {
   },
 
   async updateUsuario (data){
-    const usuario = await UsuarioDAO.update(data);
+
+    //es artista?
+    const existArt = await ArtistaDAO.findById(data.id);
+    const [usuarioData, artistaData] = separarDataUsuarioArtista(data,!!existArt);
+
+    usuarioData.id = data.id;
+    const usuario = await UsuarioDAO.update(usuarioData);
     if (!usuario) return null;
-    return new UsuarioDTO(usuario);
+
+    if (!artistaData || !existArt) return new UsuarioDTO(usuario);
+
+    artistaData.idusuario = data.id; 
+    const artista = await ArtistaDAO.update(artistaData);
+    const userart = {
+      ...usuario,
+      ...artista,
+      genero: data.genero ?? null //llamda de api
+    };
+    return new ArtistaDTO(userart);
   },
 
   async deleteUsuario(id) {

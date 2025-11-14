@@ -4,11 +4,11 @@ import prisma from '../config/database.js';
 //Encapsula el acceso a los datos del Usuario
 export const UsuarioDAO = {
   async findAll() {
-    return prisma.usuario.findMany();
+    return prisma.usuario.findMany({ include: {artista: true}} );
   },
 
   async findById(id) {
-    return prisma.usuario.findUnique({ where: { id } });
+    return prisma.usuario.findUnique({ where: { id }, include: {artista: true} });
   },
 
   async create(data,tx = prisma) {

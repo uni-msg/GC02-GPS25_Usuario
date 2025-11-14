@@ -2,6 +2,7 @@
 import express from 'express';
 import dotenv from 'dotenv';
 import usuarioRoutes from './routes/usuario.routes.js';
+import artistaRoutes from './routes/artista.routes.js';
 import favoritoRoutes from './routes/favorito.routes.js';
 import cestaRoutes from './routes/cesta.routes.js';
 import deseaRoutes from './routes/desea.routes.js';
@@ -14,6 +15,7 @@ console.log('DB URL:', process.env.DATABASE_URL);
 
 app.use(express.json());
 app.use('/api/usuarios', usuarioRoutes);
+app.use('/api/usuarios/artistas', artistaRoutes);
 app.use('/api/usuarios/favoritos', favoritoRoutes);
 app.use('/api/usuarios/cesta', cestaRoutes);
 app.use('/api/usuarios/desea', deseaRoutes);
