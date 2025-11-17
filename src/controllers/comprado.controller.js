@@ -3,7 +3,7 @@ import { CompradoService } from '../services/comprado.service.js';
 export const CompradoController = {
   async getCompradosByIdUsuario(req, res) {
     try {
-      const data = await CompradoService.getCompradosByIdUsuario(parseInt(req.params.idUsuario));
+      const data = await CompradoService.getCompradosByIdUsuario(parseInt(req.params.idusuario));
       res.status(200).json(data);
     } catch (error) {
       console.error(error);
@@ -12,7 +12,7 @@ export const CompradoController = {
   },
   async createComprados(req, res) {
     try {
-      const data = await CompradoService.createComprados(parseInt(req.params.idUsuario));
+      const data = await CompradoService.createComprados(parseInt(req.params.idusuario));
       res.status(201).json(data);
     } catch (error) {
       console.error(error);
@@ -21,7 +21,7 @@ export const CompradoController = {
   },
   async exitComprado(req, res) {
     try {
-      const data = await CompradoService.exitComprado(parseInt(req.params.idUsuario),parseInt(req.params.idElemento));
+      const data = await CompradoService.exitComprado(parseInt(req.params.idusuario),parseInt(req.params.idelemento));
       res.status(200).json(data);
     } catch (error) {
       console.error(error);
