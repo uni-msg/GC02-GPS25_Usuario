@@ -81,6 +81,24 @@ export const UsuarioController = {
       console.error(error);
       res.status(500).json({ error: 'Error al obtener usuario' });
     }
-  }
+  },
+
+  async getUsuariosPubli(req, res) {
+    try {
+      const data = await UsuarioService.listarUsuariosPubli();
+      res.status(200).json(data);
+    } catch (error) {
+      res.status(500).json({ error: 'Error al obtener usuarios' });
+    }
+  },
+  
+  async getUsuarioPubliById(req, res) {
+    try {
+      const data = await UsuarioService.obtenerUsuarioPubli(parseInt(req.params.id));
+      res.status(200).json(data);
+    } catch (error) {
+      res.status(500).json({ error: 'Error al obtener usuarios' });
+    }
+  },
   
 };

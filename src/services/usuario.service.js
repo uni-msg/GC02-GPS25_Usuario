@@ -1,7 +1,7 @@
 //Orquesta lo logica del negocio (validar, transformas, DAO)
 import { UsuarioDAO } from '../dao/usuario.dao.js';
 import { ArtistaDAO } from '../dao/artista.dao.js';
-import { UsuarioDTO } from '../dto/usuario.dto.js';
+import { UsuarioDTO,UsuarioPublicDTO } from '../dto/usuario.dto.js';
 import { ArtistaDTO } from '../dto/artista.dto.js';
 import prisma from '../config/database.js';
 import { firebaseAdmin } from "../config/firebase.js";
@@ -143,6 +143,19 @@ export const UsuarioService = {
         throw new Error("Error al eliminar usuario en Firebase o Base de Datos");
       }
     });
-  }
+  },
+
+  async listarUsuariosPubli() {
+    const usuarios = await UsuarioDAO.findAll();
+    return usuarios.map(u => {
+      return new UsuarioPublicDTO(u);
+    });
+  },
+
+  async obtenerUsuarioPubli(id) {
+    const usuario = await UsuarioDAO.findById(id);
+    if (!usuario) return null;
+    return new UsuarioPublicDTO(usuario);
+  },
 
 };

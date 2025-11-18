@@ -21,3 +21,19 @@ export class UsuarioDTO {
     this.esartista = esartista ?? false;
   }
 }
+
+export class UsuarioPublicDTO {
+  constructor({
+    id,
+    nombreusuario,
+    descripcion,
+    rutafoto,
+    esartista,
+  }) {
+    this.id = id ?? null;
+    this.nombreusuario = nombreusuario;
+    this.descripcion = descripcion ?? null;
+    this.rutafoto = rutafoto ?? null;
+    this.esartista = esartista ?? false;
+  }
+}

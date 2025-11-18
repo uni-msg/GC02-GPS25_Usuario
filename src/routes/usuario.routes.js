@@ -10,7 +10,8 @@ router.get('/logout', verifyFirebaseToken, UsuarioController.getLogout);  //Endo
 router.post('/', UsuarioController.createUsuario);
 router.put('/', verifyFirebaseToken, UsuarioController.updateUsuario);  //Endoint privado
 router.delete('/:id', verifyFirebaseToken, UsuarioController.deleteUsuario);  //Endoint privado
-
-//router.get('/', UsuarioController.getUsuarios); //Endpoint publico pruebas
+/*DATOS PUBLICOS*/
+router.get('/', UsuarioController.getUsuariosPubli); //Endpoint publico pruebas
+router.get('/:id', UsuarioController.getUsuarioPubliById); //Endpoint publico pruebas
 
 export default router;
