@@ -1,3 +1,7 @@
+/**
+ * @file artista.service.js
+ * @description Lógica de negocio relacionada con artistas.
+ */
 import { DeseaDAO } from '../dao/desea.dao.js';
 import { UsuarioDeseaElementoDTO } from '../dto/relacion.dto.js';
 import { ElementoDTO } from '../dto/elemento.dto.js';
