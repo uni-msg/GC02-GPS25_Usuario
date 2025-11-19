@@ -1,16 +1,55 @@
 import { FavoritoDAO } from '../dao/favorito.dao.js';
+import { ArtistaDAO } from '../dao/artista.dao.js';
 import { UsuarioFavoritoElementoDTO } from '../dto/relacion.dto.js';
+import { ElementoDTO } from '../dto/elemento.dto.js';
+import { ArtistaDTO } from '../dto/artista.dto.js';
 
 export const FavoritoService = {
   /**
    * Obtiene lso elementos favoritos del usuario
    * @param {number} idusuario
-   * @returns {Promise<List<ElementoDTO>>}
+   * @returns {Promise<List<ElementoDTO|A>>}
    */
   async getFavoritosByUser(idusuario) {
-    const elementos = await FavoritoDAO.findAllByUsuario(idusuario);
+    const relaciones = await FavoritoDAO.findAllByUsuario(idusuario);
+    if (!relaciones.length) return [];
+
+    const elementos = await Promise.all(
+      relaciones.map(async (rel) => {
+        console.log(rel);
+        
+        if(rel.tipo == 0){
+          const usuario = await ArtistaDAO.findById(rel.idelemento);
+          if (!usuario) throw new Error(`Error al obtener al artista favorito ${rel.idelemento}`);;
+          
+          if (!usuario.artista || !usuario.artista.idgenero) {
+            return new ArtistaDTO({ ...usuario, genero: null });
+          }
+
+          const url = `${process.env.API_CONTENIDO}/generos/${usuario.artista.idgenero}`;
+          const response = await fetch(url);
+          if (!response.ok) {
+            throw new Error(`Error al obtener el género ${usuario.artista.idgenero}`);
+          }
+
+          const genero = await response.json();
+          const userCompleto = { ...usuario, genero };
+
+          return new ArtistaDTO(userCompleto);
+        }else{
+          const url = `${process.env.API_CONTENIDO}/elementos/${rel.idelemento}`;
+          const response = await fetch(url);
+          if (!response.ok) {
+            throw new Error(`Error al obtener elemento ${rel.idelemento}`);
+          }
+
+          const data = await response.json();
+          return new ElementoDTO(data);
+        }
+      })
+    );
+
     return elementos;
-    //return usuarios.map(u => new ElementoDTO(u));
   },
 
   /**

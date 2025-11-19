@@ -11,20 +11,30 @@ export const CestaService = {
   async getCestaByUser(idusuario) {
     const elementos = await CestaDAO.findAllByUsuario(idusuario);
 
+    // Si el usuario no tiene nada en la cesta → devolver DTO vacío.
     if (!elementos || elementos.length === 0) {
       return new CestaDTO({ items: [] });
     }
 
-    // Por ahora solo devolvemos datos básicos, En el futuro, aquí se hará una llamada a la API externa
-    const items = elementos.map(
-      (e) =>
-        new CestaItemDTO({ // cuando esté la API externa, se rellenará
-          idelemento: e.idelemento,
-          nombre: null, 
-          precio: parseFloat((Math.random() * 20 + 1).toFixed(2)), //numero random por pruebas
-          rutaimagen: null,
-          tipo: null,
-        })
+    const items = await Promise.all(
+      elementos.map(async (elem) => {
+        const url = `${process.env.API_CONTENIDO}/elementos/${elem.idelemento}`;
+        const response = await fetch(url);
+
+        if (!response.ok) {
+          throw new Error(`Error al obtener elemento ${elem.idelemento}`);
+        }
+
+        const data = await response.json();
+
+        return new CestaItemDTO({
+          idelemento: data.idelemento,
+          nombre: data.nombre,
+          precio: parseFloat(data.precio.toFixed(2)),
+          rutaimagen: data.urlFoto ?? null,
+          tipo: data.esalbum ? 2 : 1, // 1 = canción, 2 = álbum (como usas tú)
+        });
+      })
     );
 
     return new CestaDTO({ items });

@@ -59,6 +59,6 @@ export class ArtistaDTO extends UsuarioDTO {
     const idGenero = data.genero?.id ?? data.idgenero ?? null;
 
     /** @type {GeneroDTO|null} */
-    this.genero = idGenero ? new GeneroDTO({ id: idGenero }) : null;
+    this.genero = idGenero ? new GeneroDTO({ id: data.genero?.id, nombre:data.genero?.nombre }) : null;
   }
 }

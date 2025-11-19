@@ -9,10 +9,40 @@ import { separarDataUsuarioArtista } from "../utils/separarDataUsuarioArtista.js
 
 export const UsuarioService = {
   async listarUsuarios() {
-    const usuarios = await UsuarioDAO.findAll();
-    return usuarios.map(u => {
-      return u.esartista ? new ArtistaDTO(u) : new UsuarioDTO(u);
-    });
+    try{
+      const usuarios = await UsuarioDAO.findAll();
+      return usuarios.map(async user => {
+
+        if(!user.esartista)
+          return UsuarioDTO(user);
+        
+        if (!user.artista || !user.artista.idgenero) {
+          return new ArtistaDTO({ ...user, genero: null });
+        }
+
+        // Llamadas paralelas a la API externa
+        const url = `${process.env.API_CONTENIDO}/generos/${user.artista.idgenero}`;
+
+        const response = await fetch(url);
+        if (!response.ok) {
+          throw new Error(`Error al obtener el género ${user.artista.idgenero}`);
+        }
+
+        const genero = await response.json();
+        const userCompleto = { ...user, genero };
+
+        return new ArtistaDTO(userCompleto);
+      });
+    } catch (error) {
+      console.error(error);
+
+      throw new ErrorResponseDTO({
+        code: 500,
+        message: "Error interno al obtener la lista de usuarios.",
+        path: `/artistas`
+      });
+
+    }
   },
 
   async createUsuario(data) {
@@ -68,8 +98,24 @@ export const UsuarioService = {
     const usuario = await UsuarioDAO.findById(id);
     if (!usuario) return null;
 
-    if(usuario.esartista)
-      return new ArtistaDTO(usuario);
+    if(usuario.esartista){
+      if (!usuario.artista || !usuario.artista.idgenero) {
+        return new ArtistaDTO({ ...usuario, genero: null });
+      }
+
+      // Llamadas paralelas a la API externa
+      const url = `${process.env.API_CONTENIDO}/generos/${usuario.artista.idgenero}`;
+
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`Error al obtener el género ${usuario.artista.idgenero}`);
+      }
+
+      const genero = await response.json();
+      const userCompleto = { ...usuario, genero };
+
+      return new ArtistaDTO(userCompleto);
+    }
 
     return new UsuarioDTO(usuario);
   },
