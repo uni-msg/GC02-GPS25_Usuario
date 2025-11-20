@@ -6,6 +6,9 @@
  */
 import express from 'express';
 import dotenv from 'dotenv';
+import swaggerUi from "swagger-ui-express";
+import swaggerDocument from "./config/swagger.js";
+
 
 import usuarioRoutes from './routes/usuario.routes.js';
 import artistaRoutes from './routes/artista.routes.js';
@@ -29,5 +32,7 @@ app.use('/api/usuarios/desea', deseaRoutes);
 app.use('/api/usuarios/tiene', compradoRoutes);
 
 app.use('/api/usuarios', usuarioRoutes);
+
+app.use('/api/docs',swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 export default app;
