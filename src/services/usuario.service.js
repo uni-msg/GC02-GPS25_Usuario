@@ -1,207 +1,264 @@
-//Orquesta lo logica del negocio (validar, transformas, DAO)
+/**
+ * @file usuario.service.js
+ * @description Lógica de negocio para usuarios: listar, crear, obtener,
+ * actualizar y eliminar. Interactúa con DAOs, Firebase y APIs externas.
+ */
+
 import { UsuarioDAO } from '../dao/usuario.dao.js';
 import { ArtistaDAO } from '../dao/artista.dao.js';
-import { UsuarioDTO,UsuarioPublicDTO } from '../dto/usuario.dto.js';
+import { UsuarioDTO, UsuarioPublicDTO } from '../dto/usuario.dto.js';
 import { ArtistaDTO } from '../dto/artista.dto.js';
+import { ErrorResponseDTO } from '../dto/errorResponse.dto.js';
 import prisma from '../config/database.js';
-import { firebaseAdmin } from "../config/firebase.js";
-import { separarDataUsuarioArtista } from "../utils/separarDataUsuarioArtista.js"
+import { firebaseAdmin } from '../config/firebase.js';
+import { separarDataUsuarioArtista } from '../utils/separarDataUsuarioArtista.js';
 
 export const UsuarioService = {
+
+  /**
+   * Obtiene la lista de usuarios. Resuelve correctamente promesas anidadas con Promise.all.
+   * @async
+   * @function listarUsuarios
+   * @returns {Promise<Array<UsuarioDTO|ArtistaDTO>>}
+   * @throws {ErrorResponseDTO}
+   */
   async listarUsuarios() {
-    try{
+    try {
       const usuarios = await UsuarioDAO.findAll();
-      return usuarios.map(async user => {
+      if (!usuarios?.length) return [];
 
-        if(!user.esartista)
-          return UsuarioDTO(user);
-        
-        if (!user.artista || !user.artista.idgenero) {
-          return new ArtistaDTO({ ...user, genero: null });
-        }
+      const elementos = await Promise.all(usuarios.map(async (user) => {
+        if (!user.esartista) return new UsuarioDTO(user);
 
-        // Llamadas paralelas a la API externa
+        // si es artista pero no tiene idgenero, devolvemos ArtistaDTO con genero null
+        if (!user.artista || !user.artista.idgenero) return new ArtistaDTO({ ...user, genero: null });
+
+        // obtener género desde microservicio de contenidos
         const url = `${process.env.API_CONTENIDO}/generos/${user.artista.idgenero}`;
-
         const response = await fetch(url);
-        if (!response.ok) {
-          throw new Error(`Error al obtener el género ${user.artista.idgenero}`);
-        }
-
+        if (!response.ok) throw new Error(`Error al obtener el género ${user.artista.idgenero}`);
         const genero = await response.json();
-        const userCompleto = { ...user, genero };
 
-        return new ArtistaDTO(userCompleto);
-      });
+        return new ArtistaDTO({ ...user, genero });
+      }));
+
+      return elementos;
     } catch (error) {
       console.error(error);
-
-      throw new ErrorResponseDTO({
-        code: 500,
-        message: "Error interno al obtener la lista de usuarios.",
-        path: `/artistas`
-      });
-
+      throw new ErrorResponseDTO({ code: 500, message: 'Error interno al obtener la lista de usuarios.', path: '/usuarios' });
     }
   },
 
+  /**
+   * Crea un usuario y su artista asociado (si aplica) en una transacción.
+   * - Separa los datos de usuario y artista.
+   * - Crea en base de datos y en Firebase; en caso de fallo hace rollback en Firebase.
+   * @async
+   * @function createUsuario
+   * @param {Object} data
+   * @returns {Promise<UsuarioDTO|ArtistaDTO>}
+   * @throws {ErrorResponseDTO}
+   */
   async createUsuario(data) {
-    const result = await prisma.$transaction(async (tx) => {
-      let firebaseUser = null;
+    try {
+      const result = await prisma.$transaction(async (tx) => {
+        let firebaseUser = null;
+        try {
+          const [usuarioData, artistaData] = separarDataUsuarioArtista(data, !!data.esartista);
 
-      try {
-        // Asegurar que no venga ID desde el cliente y separamos los datos de usuario y artista
-        const [usuarioData, artistaData] = separarDataUsuarioArtista(data, data.esartista);
-        const usuario = await UsuarioDAO.create(usuarioData,tx);
-        let artista;
-        if(artistaData){
-          artistaData.idusuario = usuario.id; 
-          artista = await ArtistaDAO.create(artistaData,tx)
-        }
-        //console.log(usuario)
-        firebaseUser = await firebaseAdmin.auth().createUser({
-          uid: String(usuario.id),
-          email: usuario.correo,
-          password: data.contrasenia,
-          displayName: usuario.nombreusuario
-        });
-        
-        if(artistaData){
-          const userart = {
-            ...usuario,
-            ...artista,
-            genero: data.genero ?? null
-          };
-          return new ArtistaDTO(userart);
-        }
-        return new UsuarioDTO(usuario);
-      } catch (error) {
-        console.error("Error en creación de usuario:", error);
+          const usuario = await UsuarioDAO.create(usuarioData, tx);
 
-        if (firebaseUser) {
-          try {
-            await firebaseAdmin.auth().deleteUser(firebaseUser.uid);
-            console.log("Usuario eliminado de Firebase por rollback");
-          } catch (cleanupError) {
-            console.error("Error al limpiar usuario en Firebase:", cleanupError);
+          let artista = null;
+          if (artistaData) {
+            artistaData.idusuario = usuario.id;
+            artista = await ArtistaDAO.create(artistaData, tx);
           }
+
+          // crear usuario en Firebase con UID igual al id de la BD
+          firebaseUser = await firebaseAdmin.auth().createUser({
+            uid: String(usuario.id),
+            email: usuario.correo,
+            password: data.contrasenia,
+            displayName: usuario.nombreusuario,
+          });
+
+          if (artista) {
+            const userart = { ...usuario, ...artista, genero: data.genero ?? null };
+            return new ArtistaDTO(userart);
+          }
+
+          return new UsuarioDTO(usuario);
+        } catch (error) {
+          // limpiar en Firebase si se creó algo
+          if (firebaseUser) {
+            try { await firebaseAdmin.auth().deleteUser(firebaseUser.uid); } catch (cleanupError) { console.error('Error cleanup Firebase:', cleanupError); }
+          }
+          console.error('Error en creación de usuario:', error);
+          throw error; // será capturado por el catch externo y transformado
         }
+      });
 
-        throw new Error("Error al crear usuario en Firebase o Base de Datos");
-      }
-    });
-
-    return result;
+      return result;
+    } catch (error) {
+      // si es un ErrorResponseDTO ya lanzado, propagarlo; si no, envolverlo
+      if (error instanceof ErrorResponseDTO) throw error;
+      throw new ErrorResponseDTO({ code: 500, message: 'Error al crear usuario en Firebase o Base de Datos.', path: '/usuarios' });
+    }
   },
 
+  /**
+   * Obtiene un usuario completo por id (incluye datos de artista y género si aplica).
+   * @async
+   * @function obtenerUsuario
+   * @param {number} id
+   * @returns {Promise<UsuarioDTO|ArtistaDTO|null>}
+   */
   async obtenerUsuario(id) {
-    const usuario = await UsuarioDAO.findById(id);
-    if (!usuario) return null;
+    try {
+      const usuario = await UsuarioDAO.findById(id);
+      if (!usuario) return null;
 
-    if(usuario.esartista){
-      if (!usuario.artista || !usuario.artista.idgenero) {
-        return new ArtistaDTO({ ...usuario, genero: null });
+      if (!usuario.esartista) return new UsuarioDTO(usuario);
+
+      if (!usuario.artista || !usuario.artista.idgenero) return new ArtistaDTO({ ...usuario, genero: null });
+
+      const url = `${process.env.API_CONTENIDO}/generos/${usuario.artista.idgenero}`;
+      const response = await fetch(url);
+      if (!response.ok) throw new Error(`Error al obtener el género ${usuario.artista.idgenero}`);
+      const genero = await response.json();
+
+      return new ArtistaDTO({ ...usuario, genero });
+    } catch (error) {
+      console.error(error);
+      throw new ErrorResponseDTO({ code: 500, message: 'Error al obtener usuario.', path: `/usuarios/${id}` });
+    }
+  },
+
+  /**
+   * Logout: revoca tokens del usuario en Firebase.
+   * @async
+   * @function logout
+   * @param {string} uid
+   * @returns {Promise<boolean>}
+   */
+  async logout(uid) {
+    try {
+      await firebaseAdmin.auth().revokeRefreshTokens(String(uid));
+      return true;
+    } catch (error) {
+      console.error(error);
+      throw new ErrorResponseDTO({ code: 500, message: 'Error al eliminar el token', path: `/usuarios/logout` });
+    }
+  },
+
+  /**
+   * Actualiza usuario y artista (si aplica).
+   * @async
+   * @function updateUsuario
+   * @param {Object} data
+   * @returns {Promise<UsuarioDTO|ArtistaDTO|null>}
+   */
+  async updateUsuario(data) {
+    try {
+      const existArt = await ArtistaDAO.findById(data.id);
+      const [usuarioData, artistaData] = separarDataUsuarioArtista(data, !!existArt);
+
+      usuarioData.id = data.id;
+      const usuario = await UsuarioDAO.update(usuarioData);
+      if (!usuario) return null;
+
+      if (!existArt) return new UsuarioDTO(usuario);
+
+      if (artistaData) {
+        artistaData.idusuario = data.id;
+        await ArtistaDAO.update(artistaData);
       }
 
-      // Llamadas paralelas a la API externa
-      const url = `${process.env.API_CONTENIDO}/generos/${usuario.artista.idgenero}`;
+      const usuarioFinal = await UsuarioDAO.findById(data.id);
+      if (!usuarioFinal.artista || !usuarioFinal.artista.idgenero) {
+        return new ArtistaDTO({ ...usuarioFinal, genero: null });
+      }
 
+      const url = `${process.env.API_CONTENIDO}/generos/${usuarioFinal.artista.idgenero}`;
       const response = await fetch(url);
+
       if (!response.ok) {
-        throw new Error(`Error al obtener el género ${usuario.artista.idgenero}`);
+        throw new Error(`Error al obtener el género ${usuarioFinal.artista.idgenero}`);
       }
 
       const genero = await response.json();
-      const userCompleto = { ...usuario, genero };
-
-      return new ArtistaDTO(userCompleto);
-    }
-
-    return new UsuarioDTO(usuario);
-  },
-
-  async logout(uid) {
-    try {
-      await firebaseAdmin.auth().revokeRefreshTokens(uid);
+      return new ArtistaDTO({
+        ...usuarioFinal,
+        genero
+      });
     } catch (error) {
-      throw new Error("Error al eliminar el token");
+      console.error(error);
+      throw new ErrorResponseDTO({ code: 500, message: 'Error al actualizar usuario.', path: `/usuarios` });
     }
-    return true;
   },
 
-  async updateUsuario (data){
-
-    //es artista?
-    const existArt = await ArtistaDAO.findById(data.id);
-    const [usuarioData, artistaData] = separarDataUsuarioArtista(data,!!existArt);
-
-    usuarioData.id = data.id;
-    const usuario = await UsuarioDAO.update(usuarioData);
-    if (!usuario) return null;
-
-    if (!artistaData || !existArt) return new UsuarioDTO(usuario);
-
-    artistaData.idusuario = data.id; 
-    const artista = await ArtistaDAO.update(artistaData);
-    const userart = {
-      ...usuario,
-      ...artista,
-      genero: data.genero ?? null //llamda de api
-    };
-    return new ArtistaDTO(userart);
-  },
-
+  /**
+   * Elimina un usuario y su registro en Firebase dentro de una transacción.
+   * @async
+   * @function deleteUsuario
+   * @param {number} id
+   * @returns {Promise<UsuarioDTO>}
+   */
   async deleteUsuario(id) {
-    return await prisma.$transaction(async (tx) => {
-      let deletedUsuario = null;
+    try {
+      return await prisma.$transaction(async (tx) => {
+        let deletedUsuario = await UsuarioDAO.delete(id, tx);
+        if (!deletedUsuario) throw new ErrorResponseDTO({ code: 404, message: 'Usuario no encontrado', path: `/usuarios/${id}` });
 
-      try {
-        deletedUsuario = await UsuarioDAO.delete(id, tx); //eliminando manteniendo la transaccionS
-
-        if (!deletedUsuario) {
-          throw new Error("Usuario no encontrado en la base de datos");
-        }
-
-        // Eliminamos de firebase si va todo bien
         try {
           await firebaseAdmin.auth().deleteUser(String(deletedUsuario.id));
-          console.log(`Usuario Firebase con UID ${deletedUsuario.id} eliminado correctamente`);
         } catch (firebaseError) {
-          console.error(" Error al eliminar usuario en Firebase:", firebaseError);
-          throw new Error("Error al eliminar usuario en Firebase");
+          console.error('Error al eliminar usuario en Firebase:', firebaseError);
+          // Reintentar o decidir política: en este diseño hacemos rollback lanzando error
+          throw new Error('Error al eliminar usuario en Firebase');
         }
 
         return new UsuarioDTO(deletedUsuario);
-      } catch (error) {
-        console.error(" Error en eliminación de usuario:", error);
-
-        // Rollback si algo falla en Firebase después de eliminar en DB
-        if (deletedUsuario) {
-          try {
-            // Reinsertar el usuario eliminado (rollback manual)
-            await UsuarioDAO.create(deletedUsuario, tx); //debe mantener el mismo ID
-            console.log("Rollback: usuario restaurado en la base de datos");
-          } catch (rollbackError) {
-            console.error("Error al restaurar usuario tras fallo:", rollbackError);
-          }
-        }
-
-        throw new Error("Error al eliminar usuario en Firebase o Base de Datos");
-      }
-    });
+      });
+    } catch (error) {
+      console.error(error);
+      if (error instanceof ErrorResponseDTO) throw error;
+      throw new ErrorResponseDTO({ code: 500, message: 'Error al eliminar usuario en Firebase o Base de Datos', path: `/usuarios/${id}` });
+    }
   },
 
+  /**
+   * Lista usuarios públicos (DTO que oculta campos sensibles).
+   * @async
+   * @function listarUsuariosPubli
+   * @returns {Promise<Array<UsuarioPublicDTO>>}
+   */
   async listarUsuariosPubli() {
-    const usuarios = await UsuarioDAO.findAll();
-    return usuarios.map(u => {
-      return new UsuarioPublicDTO(u);
-    });
+    try {
+      const usuarios = await UsuarioDAO.findAll();
+      return usuarios.map(u => new UsuarioPublicDTO(u));
+    } catch (error) {
+      console.error(error);
+      throw new ErrorResponseDTO({ code: 500, message: 'Error al listar usuarios públicos', path: '/usuarios' });
+    }
   },
 
+  /**
+   * Obtiene la información pública de un usuario por id.
+   * @async
+   * @function obtenerUsuarioPubli
+   * @param {number} id
+   * @returns {Promise<UsuarioPublicDTO|null>}
+   */
   async obtenerUsuarioPubli(id) {
-    const usuario = await UsuarioDAO.findById(id);
-    if (!usuario) return null;
-    return new UsuarioPublicDTO(usuario);
+    try {
+      const usuario = await UsuarioDAO.findById(id);
+      if (!usuario) return null;
+      return new UsuarioPublicDTO(usuario);
+    } catch (error) {
+      console.error(error);
+      throw new ErrorResponseDTO({ code: 500, message: 'Error al obtener usuario público', path: `/usuarios/${id}` });
+    }
   },
 
 };

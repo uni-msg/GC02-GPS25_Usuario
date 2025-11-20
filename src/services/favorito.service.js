@@ -1,42 +1,61 @@
+/**
+ * @file favorito.service.js
+ * @description Lógica de negocio relacionada con los elementos favoritos del usuario.
+ * Soporta artistas, canciones y álbumes.
+ */
+
 import { FavoritoDAO } from '../dao/favorito.dao.js';
 import { ArtistaDAO } from '../dao/artista.dao.js';
 import { UsuarioFavoritoElementoDTO } from '../dto/relacion.dto.js';
 import { ElementoDTO } from '../dto/elemento.dto.js';
 import { ArtistaDTO } from '../dto/artista.dto.js';
+import { ErrorResponseDTO } from '../dto/errorResponse.dto.js';
 
 export const FavoritoService = {
+
   /**
-   * Obtiene lso elementos favoritos del usuario
-   * @param {number} idusuario
-   * @returns {Promise<List<ElementoDTO|A>>}
+   * Obtiene todos los elementos favoritos de un usuario.
+   *
+   * @async
+   * @function getFavoritosByUser
+   * @param {number} idusuario - ID del usuario.
+   * @returns {Promise<Array<ArtistaDTO|ElementoDTO>>}
+   *
+   * @description
+   * Recupera todas las relaciones de favoritos y obtiene los datos completos de artistas,
+   * canciones y álbumes consultando los microservicios correspondientes.
+   *
+   * @throws {ErrorResponseDTO}
    */
   async getFavoritosByUser(idusuario) {
-    const relaciones = await FavoritoDAO.findAllByUsuario(idusuario);
-    if (!relaciones.length) return [];
+    try {
+      const relaciones = await FavoritoDAO.findAllByUsuario(idusuario);
+      if (!relaciones.length) return [];
 
-    const elementos = await Promise.all(
-      relaciones.map(async (rel) => {
-        console.log(rel);
-        
-        if(rel.tipo == 0){
-          const usuario = await ArtistaDAO.findById(rel.idelemento);
-          if (!usuario) throw new Error(`Error al obtener al artista favorito ${rel.idelemento}`);;
-          
-          if (!usuario.artista || !usuario.artista.idgenero) {
-            return new ArtistaDTO({ ...usuario, genero: null });
+      const elementos = await Promise.all(
+        relaciones.map(async (rel) => {
+          if (rel.tipo === 0) {
+            // Artista
+            const usuario = await ArtistaDAO.findById(rel.idelemento);
+            if (!usuario) throw new Error(`Error al obtener al artista favorito ${rel.idelemento}`);
+
+            const generoId = usuario.artista?.idgenero ?? null;
+
+            if (!generoId) {
+              return new ArtistaDTO({ ...usuario, genero: null });
+            }
+
+            const url = `${process.env.API_CONTENIDO}/generos/${generoId}`;
+            const response = await fetch(url);
+            if (!response.ok) {
+              throw new Error(`Error al obtener el género ${generoId}`);
+            }
+
+            const genero = await response.json();
+            return new ArtistaDTO({ ...usuario, genero });
           }
 
-          const url = `${process.env.API_CONTENIDO}/generos/${usuario.artista.idgenero}`;
-          const response = await fetch(url);
-          if (!response.ok) {
-            throw new Error(`Error al obtener el género ${usuario.artista.idgenero}`);
-          }
-
-          const genero = await response.json();
-          const userCompleto = { ...usuario, genero };
-
-          return new ArtistaDTO(userCompleto);
-        }else{
+          // Elemento (álbum o canción)
           const url = `${process.env.API_CONTENIDO}/elementos/${rel.idelemento}`;
           const response = await fetch(url);
           if (!response.ok) {
@@ -45,83 +64,160 @@ export const FavoritoService = {
 
           const data = await response.json();
           return new ElementoDTO(data);
-        }
-      })
-    );
+        })
+      );
 
-    return elementos;
+      return elementos;
+    } catch (error) {
+      throw new ErrorResponseDTO({
+        code: 500,
+        message: "Error al obtener los elementos favoritos del usuario.",
+        path: `/favoritos/${idusuario}`,
+      });
+    }
   },
 
   /**
-   * Comprueba si un artista ya está en la lista de favoritos del usuario
+   * Verifica si un artista ya está marcado como favorito.
+   *
+   * @async
+   * @function existArt
    * @param {number} idusuario
    * @param {number} idelemento
    * @returns {Promise<boolean>}
+   *
+   * @throws {ErrorResponseDTO}
    */
   async existArt(idusuario, idelemento) {
-    let tipo = [0]
-    const existe = await FavoritoDAO.findOne(idusuario, idelemento, tipo);
-    return !!existe;
+    try {
+      const tipo = [0];
+      const existe = await FavoritoDAO.findOne(idusuario, idelemento, tipo);
+      return !!existe;
+    } catch (error) {
+      throw new ErrorResponseDTO({
+        code: 500,
+        message: "Error al verificar si el artista es favorito.",
+        path: `/favoritos/${idusuario}/${idelemento}/artista`,
+      });
+    }
   },
 
   /**
-   * Elimina un artista de la lista de favoritos del usuario
+   * Elimina un artista de favoritos.
+   *
+   * @async
+   * @function deleteArt
    * @param {number} idusuario
    * @param {number} idelemento
    * @returns {Promise<UsuarioFavoritoElementoDTO|null>}
+   *
+   * @throws {ErrorResponseDTO}
    */
   async deleteArt(idusuario, idelemento) {
-    let tipo = [0]
-    const existe = await FavoritoDAO.findOne(idusuario, idelemento, tipo);
-    if (!existe) return null;
+    try {
+      const tipo = [0];
+      const existe = await FavoritoDAO.findOne(idusuario, idelemento, tipo);
+      if (!existe) return null;
 
-    const eliminado = await FavoritoDAO.delete(idusuario, idelemento, tipo);
-    return new UsuarioFavoritoElementoDTO(eliminado);
+      const eliminado = await FavoritoDAO.delete(idusuario, idelemento, tipo);
+      return new UsuarioFavoritoElementoDTO(eliminado);
+    } catch (error) {
+      throw new ErrorResponseDTO({
+        code: 500,
+        message: "Error al eliminar el artista de favoritos.",
+        path: `/favoritos/${idusuario}/${idelemento}/artista`,
+      });
+    }
   },
 
   /**
-   * Comprueba si un album o cancion ya está en la lista de favoritos del usuario
+   * Verifica si un contenido (álbum o canción) es favorito del usuario.
+   *
+   * @async
+   * @function existCont
    * @param {number} idusuario
    * @param {number} idelemento
    * @returns {Promise<boolean>}
+   *
+   * @throws {ErrorResponseDTO}
    */
   async existCont(idusuario, idelemento) {
-    let tipo = [1,2]
-    const existe = await FavoritoDAO.findOne(idusuario, idelemento, tipo);
-    return !!existe;
+    try {
+      const tipo = [1, 2];
+      const existe = await FavoritoDAO.findOne(idusuario, idelemento, tipo);
+      return !!existe;
+    } catch (_) {
+      throw new ErrorResponseDTO({
+        code: 500,
+        message: "Error al verificar si el contenido es favorito.",
+        path: `/favoritos/${idusuario}/${idelemento}/contenido`,
+      });
+    }
   },
 
   /**
-   * Elimina un album o cancion de la lista de favoritos del usuario
+   * Elimina un contenido (álbum o canción) de favoritos.
+   *
+   * @async
+   * @function deleteCont
    * @param {number} idusuario
    * @param {number} idelemento
    * @returns {Promise<UsuarioFavoritoElementoDTO|null>}
+   *
+   * @throws {ErrorResponseDTO}
    */
   async deleteCont(idusuario, idelemento) {
-    let tipo = [1,2]
-    const existe = await FavoritoDAO.findOne(idusuario, idelemento, tipo);
-    if (!existe) return null;
+    try {
+      const tipo = [1, 2];
+      const existe = await FavoritoDAO.findOne(idusuario, idelemento, tipo);
+      if (!existe) return null;
 
-    const eliminado = await FavoritoDAO.delete(idusuario, idelemento, tipo);
-    return new UsuarioFavoritoElementoDTO(eliminado);
+      const eliminado = await FavoritoDAO.delete(idusuario, idelemento, tipo);
+      return new UsuarioFavoritoElementoDTO(eliminado);
+    } catch (error) {
+      throw new ErrorResponseDTO({
+        code: 500,
+        message: "Error al eliminar el contenido de favoritos.",
+        path: `/favoritos/${idusuario}/${idelemento}/contenido`,
+      });
+    }
   },
 
   /**
-   * Agrega un elemento a la lista de favoritos del usuario
-   * @param {UsuarioCestaElementoDTO} data
+   * Agrega un elemento a la lista de favoritos.
+   *
+   * @async
+   * @function createFavorito
+   * @param {UsuarioFavoritoElementoDTO} data
    * @returns {Promise<UsuarioFavoritoElementoDTO>}
+   *
+   * @description Valida si el elemento ya existe como favorito.
+   *
+   * @throws {ErrorResponseDTO}
    */
   async createFavorito(data) {
-    let tipo = [data.tipo];
+    try {
+      const tipo = [data.tipo];
 
-    // TODO si necesito que se verifique si existe el artista antes de hacerlo
+      const existe = await FavoritoDAO.findOne(data.idusuario, data.idelemento, tipo);
+      if (existe) {
+        throw new ErrorResponseDTO({
+          code: 409,
+          message: "El elemento ya se encuentra en la lista de favoritos del usuario.",
+          path: `/favoritos`,
+        });
+      }
 
-    const existe = await FavoritoDAO.findOne(data.idusuario, data.idelemento, tipo);
-    if (existe) {
-      throw new Error('El elemento ya está en la cesta del usuario.');
+      const creado = await FavoritoDAO.create(data);
+      return new UsuarioFavoritoElementoDTO(creado);
+    } catch (error) {
+      if (error instanceof ErrorResponseDTO) throw error;
+
+      throw new ErrorResponseDTO({
+        code: 500,
+        message: "Error al registrar el favorito en la base de datos.",
+        path: `/favoritos`,
+      });
     }
-
-    const creado = await FavoritoDAO.create(data);
-    return new UsuarioFavoritoElementoDTO(creado);
   },
 };

@@ -7,7 +7,6 @@
 import { Router } from 'express';
 import { verifyFirebaseToken } from "../middlewares/authJWTFirebase.js";
 import { UsuarioController } from '../controllers/usuario.controller.js';
-import { ArtistaDTO } from '../dto/artista.dto.js';
 
 const router = Router();
 
