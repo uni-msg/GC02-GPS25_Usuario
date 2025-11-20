@@ -45,6 +45,9 @@ PORT=3000
 # Cadena de conexión a PostgreSQL
 DATABASE_URL=postgresql://user:password@localhost:5432/mydatabase
 
+# Microservicio contenido
+API_CONTENIDO=http://localhost:8083/api
+
 # Entorno de ejecución
 NODE_ENV=development
 

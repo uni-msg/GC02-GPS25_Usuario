@@ -131,7 +131,7 @@ export const CompradoController = {
       const idusuario = parseInt(req.params.idusuario);
       const idelemento = parseInt(req.params.idelemento);
 
-      const data = await CompradoService.exitComprado(idusuario, idelemento);
+      const data = await CompradoService.existComprado(idusuario, idelemento);
       res.status(200).json(data);
     } catch (error) {
       console.error(error);

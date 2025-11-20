@@ -144,7 +144,7 @@ export const CestaController = {
 
       const isInCesta = await CestaService.existItemCesta(idusuario, idelemento);
 
-      res.status(200).json({ isInCesta });
+      res.status(200).json( isInCesta );
 
     } catch (error) {
       console.error(error);

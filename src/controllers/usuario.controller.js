@@ -204,7 +204,7 @@ export const UsuarioController = {
       if (!uid) return res.status(400).json(new ErrorResponseDTO({ code: 400, message: 'UID no proporcionado', path: req.originalUrl }));
 
       await UsuarioService.logout(String(uid));
-      res.status(200).json({ success: true });
+      res.status(200).json(true);
     } catch (error) {
       console.error(error);
       res.status(500).json(new ErrorResponseDTO({
