@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: services/desea.service.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: services/desea.service.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>/**
+ * @file artista.service.js
+ * @description Lógica de negocio relacionada con artistas.
+ */
+import { DeseaDAO } from '../dao/desea.dao.js';
+import { UsuarioDeseaElementoDTO } from '../dto/relacion.dto.js';
+import { ElementoDTO } from '../dto/elemento.dto.js';
+import { ErrorResponseDTO } from '../dto/errorResponse.dto.js';
+
+
+export const DeseaService = {
+
+  /**
+   * Obtiene la lista de deseos de un usuario.
+   * @param {number} idusuario
+   * @returns {Promise&lt;Array&lt;ElementoDTO>>}
+   */
+  async getDeseadosByUser(idusuario) {
+    try {
+      const relaciones = await DeseaDAO.findAllByUsuario(idusuario);    // Si no hay elementos, devolvemos array vacío
+      if (!relaciones.length) return [];
+
+      // Llamadas paralelas a la API externa
+      const elementos = await Promise.all(
+        relaciones.map(async (rel) => {
+          const url = `${process.env.API_CONTENIDO}/elementos/${rel.idelemento}`;
+          const response = await fetch(url);
+          if (!response.ok) {
+            throw new Error(`Error al obtener elemento ${rel.idelemento}`);
+          }
+
+          const data = await response.json();
+          return new ElementoDTO(data);
+        })
+      );
+
+      return elementos;
+    } catch (error) {
+      throw new ErrorResponseDTO({
+        code: 500,
+        message: "Error interno al obtener la lista de elementos deseados.",
+        path: `/desea/${idusuario}`
+      });
+    }
+  },
+
+  /**
+   * Comprueba si un elemento ya está en la lista de deseos del usuario.
+   * @param {number} idusuario
+   * @param {number} idelemento
+   * @returns {Promise&lt;boolean>}
+   */
+  async existDeseado(idusuario, idelemento) {
+    try {
+      const existe = await DeseaDAO.findOne(idusuario, idelemento);
+      return !!existe;
+    } catch (error) {
+      throw new ErrorResponseDTO({
+        code: 500,
+        message: "Error interno al verificar si el elemento está en la lista de deseos.",
+        path: `/desea/${idusuario}/${idelemento}`
+      });
+    }
+  },
+
+  /**
+   * Elimina un elemento de la lista de deseos del usuario.
+   * @param {number} idusuario
+   * @param {number} idelemento
+   * @returns {Promise&lt;UsuarioDeseaElementoDTO|null>}
+   */
+  async deleteDeseado(idusuario, idelemento) {
+    try {
+      const existe = await DeseaDAO.findOne(idusuario, idelemento);
+      if (!existe) return null;
+
+      const eliminado = await DeseaDAO.delete(idusuario, idelemento);
+      return new UsuarioDeseaElementoDTO(eliminado);
+    } catch (error) {
+      throw new ErrorResponseDTO({
+        code: 500,
+        message: "Error interno al eliminar el elemento deseado.",
+        path: `/desea/${idusuario}/${idelemento}`,
+      });
+    }
+  },
+
+  /**
+   * Agrega un elemento a la lista de deseos del usuario.
+   * @param {UsuarioDeseaElementoDTO} data
+   * @returns {Promise&lt;UsuarioDeseaElementoDTO>}
+   */
+  async createDeseado(data) {
+    try {
+      const existe = await DeseaDAO.findOne(data.idusuario, data.idelemento);
+      if (existe) {
+        throw new ErrorResponseDTO({
+          code: 409,
+          message: "El elemento ya está en la lista del usuario.",
+          path: `/desea`,
+        });
+      }
+
+      const creado = await DeseaDAO.create(data);
+      return new UsuarioDeseaElementoDTO(creado);
+    } catch (error) {
+      if (error instanceof ErrorResponseDTO) {
+        throw error;
+      }
+
+      throw new ErrorResponseDTO({
+        code: 500,
+        message: "Error interno al crear el elemento deseado.",
+        path: `/desea`,
+      });
+    }
+  },
+
+
+};
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Namespaces</h3><ul><li><a href="ArtistaDAO.html">ArtistaDAO</a></li><li><a href="CestaDAO.html">CestaDAO</a></li><li><a href="CompradoDAO.html">CompradoDAO</a></li><li><a href="DeseaDAO.html">DeseaDAO</a></li><li><a href="FavoritoDAO.html">FavoritoDAO</a></li><li><a href="UsuarioDAO.html">UsuarioDAO</a></li></ul><h3>Classes</h3><ul><li><a href="ArtistaDTO.html">ArtistaDTO</a></li><li><a href="CestaDTO.html">CestaDTO</a></li><li><a href="CestaItemDTO.html">CestaItemDTO</a></li><li><a href="ElementoDTO.html">ElementoDTO</a></li><li><a href="ErrorResponseDTO.html">ErrorResponseDTO</a></li><li><a href="GeneroDTO.html">GeneroDTO</a></li><li><a href="RelacionBaseDTO.html">RelacionBaseDTO</a></li><li><a href="UsuarioCestaElementoDTO.html">UsuarioCestaElementoDTO</a></li><li><a href="UsuarioDTO.html">UsuarioDTO</a></li><li><a href="UsuarioDeseaElementoDTO.html">UsuarioDeseaElementoDTO</a></li><li><a href="UsuarioFavoritoElementoDTO.html">UsuarioFavoritoElementoDTO</a></li><li><a href="UsuarioPublicDTO.html">UsuarioPublicDTO</a></li><li><a href="UsuarioTieneElementoDTO.html">UsuarioTieneElementoDTO</a></li></ul><h3>Global</h3><ul><li><a href="global.html#createComprados">createComprados</a></li><li><a href="global.html#createDeseado">createDeseado</a></li><li><a href="global.html#createFavorito">createFavorito</a></li><li><a href="global.html#createItemCesta">createItemCesta</a></li><li><a href="global.html#createUsuario">createUsuario</a></li><li><a href="global.html#deleteArt">deleteArt</a></li><li><a href="global.html#deleteCont">deleteCont</a></li><li><a href="global.html#deleteDeseado">deleteDeseado</a></li><li><a href="global.html#deleteItemCesta">deleteItemCesta</a></li><li><a href="global.html#deleteUsuario">deleteUsuario</a></li><li><a href="global.html#existArt">existArt</a></li><li><a href="global.html#existComprado">existComprado</a></li><li><a href="global.html#existCont">existCont</a></li><li><a href="global.html#existDeseado">existDeseado</a></li><li><a href="global.html#existItemCesta">existItemCesta</a></li><li><a href="global.html#exitComprado">exitComprado</a></li><li><a href="global.html#getArtistaById">getArtistaById</a></li><li><a href="global.html#getArtistas">getArtistas</a></li><li><a href="global.html#getCestaByUser">getCestaByUser</a></li><li><a href="global.html#getCompradosByIdUsuario">getCompradosByIdUsuario</a></li><li><a href="global.html#getDeseadosByUser">getDeseadosByUser</a></li><li><a href="global.html#getFavoritosByUser">getFavoritosByUser</a></li><li><a href="global.html#getLogin">getLogin</a></li><li><a href="global.html#getLogout">getLogout</a></li><li><a href="global.html#getUsuarioPubliById">getUsuarioPubliById</a></li><li><a href="global.html#getUsuarios">getUsuarios</a></li><li><a href="global.html#getUsuariosPubli">getUsuariosPubli</a></li><li><a href="global.html#listarUsuarios">listarUsuarios</a></li><li><a href="global.html#listarUsuariosPubli">listarUsuariosPubli</a></li><li><a href="global.html#listen">listen</a></li><li><a href="global.html#logout">logout</a></li><li><a href="global.html#obtenerUsuario">obtenerUsuario</a></li><li><a href="global.html#obtenerUsuarioPubli">obtenerUsuarioPubli</a></li><li><a href="global.html#separarDataUsuarioArtista">separarDataUsuarioArtista</a></li><li><a href="global.html#updateUsuario">updateUsuario</a></li><li><a href="global.html#verifyFirebaseToken">verifyFirebaseToken</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a> on Thu Nov 20 2025 11:31:06 GMT+0100 (hora estándar de Europa central)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

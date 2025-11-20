@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: dto/relacion.dto.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: dto/relacion.dto.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>/**
+ * @file relacion.dto.js
+ * @description DTOs que representan relaciones entre usuarios y elementos:
+ * lista de deseos, favoritos, comprados y cesta.
+ * Incluye una clase base para evitar duplicación y asegurar coherencia.
+ */
+
+/**
+ * Clase base para relaciones entre un usuario y un elemento.
+ * Incluye los campos comunes a todas las listas (desea, favorito, tiene, cesta).
+ *
+ * @class RelacionBaseDTO
+ *
+ * @property {number} idusuario - ID del usuario propietario de la relación.
+ * @property {number} idelemento - ID del elemento relacionado.
+ * @property {Date|null} fecha - Fecha asociada a la relación (ej: compra).
+ *
+ * @example
+ * const rel = new RelacionBaseDTO({
+ *   idusuario: 10,
+ *   idelemento: 55,
+ *   fecha: "2024-02-18T12:00:00Z"
+ * });
+ */
+
+export class RelacionBaseDTO {
+  constructor({ idusuario, idelemento, fecha }) {
+    /** @type {number} */
+    this.idusuario = idusuario;
+
+    /** @type {number} */
+    this.idelemento = idelemento;
+
+    /** @type {Date|null} */
+    this.fecha = fecha ? new Date(fecha) : null;
+  }
+}
+
+/**
+ * DTO para elementos favoritos del usuario.
+ * Extiende la relación base e incorpora el campo `tipo`.
+ *
+ * @class UsuarioFavoritoElementoDTO
+ * @extends RelacionBaseDTO
+ *
+ * @property {number} tipo - Tipo de favorito:
+ *  - 0 → Artista  
+ *  - 1 → Canción  
+ *  - 2 → Álbum  
+ *
+ * @example
+ * const fav = new UsuarioFavoritoElementoDTO({
+ *   idusuario: 4,
+ *   idelemento: 99,
+ *   tipo: 1,
+ *   fecha: "2024-01-10"
+ * });
+ */
+export class UsuarioFavoritoElementoDTO extends RelacionBaseDTO {
+  constructor({ idusuario, idelemento, tipo, fecha }) {
+    super({ idusuario, idelemento, fecha });
+
+    /** @type {number} */
+    this.tipo = tipo ?? 0;
+  }
+}
+
+/**
+ * DTO para elementos comprados por el usuario (usuario_tiene_elemento).
+ * Solo utiliza los campos base.
+ *
+ * @class UsuarioTieneElementoDTO
+ * @extends RelacionBaseDTO
+ *
+ * @example
+ * const compra = new UsuarioTieneElementoDTO({
+ *   idusuario: 4,
+ *   idelemento: 123,
+ *   fecha: "2024-02-20"
+ * });
+ */
+export class UsuarioTieneElementoDTO extends RelacionBaseDTO {}
+
+/**
+ * DTO para elementos deseados por el usuario (lista de deseos).
+ *
+ * @class UsuarioDeseaElementoDTO
+ * @extends RelacionBaseDTO
+ *
+ * @example
+ * const deseo = new UsuarioDeseaElementoDTO({
+ *   idusuario: 7,
+ *   idelemento: 80
+ * });
+ */
+export class UsuarioDeseaElementoDTO extends RelacionBaseDTO {}
+
+/**
+ * DTO para elementos que están en la cesta del usuario.
+ *
+ * @class UsuarioCestaElementoDTO
+ * @extends RelacionBaseDTO
+ *
+ * @example
+ * const cesta = new UsuarioCestaElementoDTO({
+ *   idusuario: 3,
+ *   idelemento: 40
+ * });
+ */
+export class UsuarioCestaElementoDTO extends RelacionBaseDTO {}
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Namespaces</h3><ul><li><a href="ArtistaDAO.html">ArtistaDAO</a></li><li><a href="CestaDAO.html">CestaDAO</a></li><li><a href="CompradoDAO.html">CompradoDAO</a></li><li><a href="DeseaDAO.html">DeseaDAO</a></li><li><a href="FavoritoDAO.html">FavoritoDAO</a></li><li><a href="UsuarioDAO.html">UsuarioDAO</a></li></ul><h3>Classes</h3><ul><li><a href="ArtistaDTO.html">ArtistaDTO</a></li><li><a href="CestaDTO.html">CestaDTO</a></li><li><a href="CestaItemDTO.html">CestaItemDTO</a></li><li><a href="ElementoDTO.html">ElementoDTO</a></li><li><a href="ErrorResponseDTO.html">ErrorResponseDTO</a></li><li><a href="GeneroDTO.html">GeneroDTO</a></li><li><a href="RelacionBaseDTO.html">RelacionBaseDTO</a></li><li><a href="UsuarioCestaElementoDTO.html">UsuarioCestaElementoDTO</a></li><li><a href="UsuarioDTO.html">UsuarioDTO</a></li><li><a href="UsuarioDeseaElementoDTO.html">UsuarioDeseaElementoDTO</a></li><li><a href="UsuarioFavoritoElementoDTO.html">UsuarioFavoritoElementoDTO</a></li><li><a href="UsuarioPublicDTO.html">UsuarioPublicDTO</a></li><li><a href="UsuarioTieneElementoDTO.html">UsuarioTieneElementoDTO</a></li></ul><h3>Global</h3><ul><li><a href="global.html#createComprados">createComprados</a></li><li><a href="global.html#createDeseado">createDeseado</a></li><li><a href="global.html#createFavorito">createFavorito</a></li><li><a href="global.html#createItemCesta">createItemCesta</a></li><li><a href="global.html#createUsuario">createUsuario</a></li><li><a href="global.html#deleteArt">deleteArt</a></li><li><a href="global.html#deleteCont">deleteCont</a></li><li><a href="global.html#deleteDeseado">deleteDeseado</a></li><li><a href="global.html#deleteItemCesta">deleteItemCesta</a></li><li><a href="global.html#deleteUsuario">deleteUsuario</a></li><li><a href="global.html#existArt">existArt</a></li><li><a href="global.html#existComprado">existComprado</a></li><li><a href="global.html#existCont">existCont</a></li><li><a href="global.html#existDeseado">existDeseado</a></li><li><a href="global.html#existItemCesta">existItemCesta</a></li><li><a href="global.html#exitComprado">exitComprado</a></li><li><a href="global.html#getArtistaById">getArtistaById</a></li><li><a href="global.html#getArtistas">getArtistas</a></li><li><a href="global.html#getCestaByUser">getCestaByUser</a></li><li><a href="global.html#getCompradosByIdUsuario">getCompradosByIdUsuario</a></li><li><a href="global.html#getDeseadosByUser">getDeseadosByUser</a></li><li><a href="global.html#getFavoritosByUser">getFavoritosByUser</a></li><li><a href="global.html#getLogin">getLogin</a></li><li><a href="global.html#getLogout">getLogout</a></li><li><a href="global.html#getUsuarioPubliById">getUsuarioPubliById</a></li><li><a href="global.html#getUsuarios">getUsuarios</a></li><li><a href="global.html#getUsuariosPubli">getUsuariosPubli</a></li><li><a href="global.html#listarUsuarios">listarUsuarios</a></li><li><a href="global.html#listarUsuariosPubli">listarUsuariosPubli</a></li><li><a href="global.html#listen">listen</a></li><li><a href="global.html#logout">logout</a></li><li><a href="global.html#obtenerUsuario">obtenerUsuario</a></li><li><a href="global.html#obtenerUsuarioPubli">obtenerUsuarioPubli</a></li><li><a href="global.html#separarDataUsuarioArtista">separarDataUsuarioArtista</a></li><li><a href="global.html#updateUsuario">updateUsuario</a></li><li><a href="global.html#verifyFirebaseToken">verifyFirebaseToken</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a> on Thu Nov 20 2025 11:31:06 GMT+0100 (hora estándar de Europa central)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

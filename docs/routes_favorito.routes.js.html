@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: routes/favorito.routes.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: routes/favorito.routes.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>/**
+ * @file favorito.routes.js
+ * @description Define las rutas relacionadas con los favoritos del usuario.
+ * Todas las rutas requieren autenticación mediante Firebase JWT.
+ */
+
+import { Router } from 'express';
+import { verifyFirebaseToken } from "../middlewares/authJWTFirebase.js";
+import { FavoritoController } from '../controllers/favorito.controller.js';
+
+const router = Router();
+
+/**
+ * @route GET /api/usuarios/favoritos/:idusuario
+ * @description
+ * Obtiene todos los elementos que el usuario tiene marcados como favoritos.
+ * Incluye artistas, canciones y álbumes, consultando el servicio de Contenido
+ * para obtener los datos completos de cada tipo de elemento.
+ *
+ * @access Privado (requiere JWT Firebase)
+ * @param {number} idusuario - ID del usuario cuyos favoritos se desean obtener.
+ *
+ * @returns {Array&lt;ElementoDTO|ArtistaDTO>|ErrorResponseDTO}
+ * Lista detallada de los favoritos del usuario.
+ */
+router.get('/:idusuario', verifyFirebaseToken, FavoritoController.getFavoritosByUser);
+
+
+/**
+ * @route GET /api/usuarios/favoritos/:idusuario/:idelemento/artista
+ * @description
+ * Verifica si un artista específico está marcado como favorito por el usuario.
+ *
+ * @access Privado (requiere JWT Firebase)
+ * @param {number} idusuario - ID del usuario.
+ * @param {number} idelemento - ID del artista.
+ *
+ * @returns {boolean|ErrorResponseDTO}
+ * Indica si el artista está en la lista de favoritos.
+ */
+router.get('/:idusuario/:idelemento/artista', verifyFirebaseToken, FavoritoController.existArt);
+
+
+/**
+ * @route DELETE /api/usuarios/favoritos/:idusuario/:idelemento/artista
+ * @description
+ * Elimina un artista de la lista de favoritos del usuario.
+ * Si el artista no estaba marcado, devuelve 404.
+ *
+ * @access Privado (requiere JWT Firebase)
+ * @param {number} idusuario - ID del usuario.
+ * @param {number} idelemento - ID del artista.
+ *
+ * @returns {void|ErrorResponseDTO}
+ */
+router.delete('/:idusuario/:idelemento/artista', verifyFirebaseToken, FavoritoController.deleteArt);
+
+
+/**
+ * @route GET /api/usuarios/favoritos/:idusuario/:idelemento/contenido
+ * @description
+ * Verifica si un contenido (canción o álbum) está marcado como favorito por el usuario.
+ *
+ * @access Privado (requiere JWT Firebase)
+ * @param {number} idusuario - ID del usuario.
+ * @param {number} idelemento - ID del contenido.
+ *
+ * @returns {boolean|ErrorResponseDTO}
+ * Indica si el contenido está marcado como favorito.
+ */
+router.get('/:idusuario/:idelemento/contenido', verifyFirebaseToken, FavoritoController.existCont);
+
+
+/**
+ * @route DELETE /api/usuarios/favoritos/:idusuario/:idelemento/contenido
+ * @description
+ * Elimina un contenido (canción o álbum) de la lista de favoritos del usuario.
+ * Si no estaba en favoritos devuelve 404.
+ *
+ * @access Privado (requiere JWT Firebase)
+ * @param {number} idusuario - ID del usuario.
+ * @param {number} idelemento - ID del contenido.
+ *
+ * @returns {void|ErrorResponseDTO}
+ */
+router.delete('/:idusuario/:idelemento/contenido', verifyFirebaseToken, FavoritoController.deleteCont);
+
+
+/**
+ * @route POST /api/usuarios/favoritos
+ * @description
+ * Añade un nuevo favorito para el usuario.
+ * Soporta favoritos de artista (tipo 0), canción (tipo 1) o álbum (tipo 2).
+ * Si ya existe devuelve 409. En caso de éxito responde con 201.
+ *
+ * @access Privado (requiere JWT Firebase)
+ *
+ * @body {idUsuario:number, idElemento:number, tipo:number}
+ * - tipo = 0 → artista  
+ * - tipo = 1 → canción  
+ * - tipo = 2 → álbum  
+ *
+ * @returns {UsuarioFavoritoElementoDTO|ErrorResponseDTO}
+ * Relación creada y cabecera Location con la URL del recurso.
+ */
+router.post('/', verifyFirebaseToken, FavoritoController.createFavorito);
+
+
+export default router;
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Namespaces</h3><ul><li><a href="ArtistaDAO.html">ArtistaDAO</a></li><li><a href="CestaDAO.html">CestaDAO</a></li><li><a href="CompradoDAO.html">CompradoDAO</a></li><li><a href="DeseaDAO.html">DeseaDAO</a></li><li><a href="FavoritoDAO.html">FavoritoDAO</a></li><li><a href="UsuarioDAO.html">UsuarioDAO</a></li></ul><h3>Classes</h3><ul><li><a href="ArtistaDTO.html">ArtistaDTO</a></li><li><a href="CestaDTO.html">CestaDTO</a></li><li><a href="CestaItemDTO.html">CestaItemDTO</a></li><li><a href="ElementoDTO.html">ElementoDTO</a></li><li><a href="ErrorResponseDTO.html">ErrorResponseDTO</a></li><li><a href="GeneroDTO.html">GeneroDTO</a></li><li><a href="RelacionBaseDTO.html">RelacionBaseDTO</a></li><li><a href="UsuarioCestaElementoDTO.html">UsuarioCestaElementoDTO</a></li><li><a href="UsuarioDTO.html">UsuarioDTO</a></li><li><a href="UsuarioDeseaElementoDTO.html">UsuarioDeseaElementoDTO</a></li><li><a href="UsuarioFavoritoElementoDTO.html">UsuarioFavoritoElementoDTO</a></li><li><a href="UsuarioPublicDTO.html">UsuarioPublicDTO</a></li><li><a href="UsuarioTieneElementoDTO.html">UsuarioTieneElementoDTO</a></li></ul><h3>Global</h3><ul><li><a href="global.html#createComprados">createComprados</a></li><li><a href="global.html#createDeseado">createDeseado</a></li><li><a href="global.html#createFavorito">createFavorito</a></li><li><a href="global.html#createItemCesta">createItemCesta</a></li><li><a href="global.html#createUsuario">createUsuario</a></li><li><a href="global.html#deleteArt">deleteArt</a></li><li><a href="global.html#deleteCont">deleteCont</a></li><li><a href="global.html#deleteDeseado">deleteDeseado</a></li><li><a href="global.html#deleteItemCesta">deleteItemCesta</a></li><li><a href="global.html#deleteUsuario">deleteUsuario</a></li><li><a href="global.html#existArt">existArt</a></li><li><a href="global.html#existComprado">existComprado</a></li><li><a href="global.html#existCont">existCont</a></li><li><a href="global.html#existDeseado">existDeseado</a></li><li><a href="global.html#existItemCesta">existItemCesta</a></li><li><a href="global.html#exitComprado">exitComprado</a></li><li><a href="global.html#getArtistaById">getArtistaById</a></li><li><a href="global.html#getArtistas">getArtistas</a></li><li><a href="global.html#getCestaByUser">getCestaByUser</a></li><li><a href="global.html#getCompradosByIdUsuario">getCompradosByIdUsuario</a></li><li><a href="global.html#getDeseadosByUser">getDeseadosByUser</a></li><li><a href="global.html#getFavoritosByUser">getFavoritosByUser</a></li><li><a href="global.html#getLogin">getLogin</a></li><li><a href="global.html#getLogout">getLogout</a></li><li><a href="global.html#getUsuarioPubliById">getUsuarioPubliById</a></li><li><a href="global.html#getUsuarios">getUsuarios</a></li><li><a href="global.html#getUsuariosPubli">getUsuariosPubli</a></li><li><a href="global.html#listarUsuarios">listarUsuarios</a></li><li><a href="global.html#listarUsuariosPubli">listarUsuariosPubli</a></li><li><a href="global.html#listen">listen</a></li><li><a href="global.html#logout">logout</a></li><li><a href="global.html#obtenerUsuario">obtenerUsuario</a></li><li><a href="global.html#obtenerUsuarioPubli">obtenerUsuarioPubli</a></li><li><a href="global.html#separarDataUsuarioArtista">separarDataUsuarioArtista</a></li><li><a href="global.html#updateUsuario">updateUsuario</a></li><li><a href="global.html#verifyFirebaseToken">verifyFirebaseToken</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a> on Thu Nov 20 2025 11:31:06 GMT+0100 (hora estándar de Europa central)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

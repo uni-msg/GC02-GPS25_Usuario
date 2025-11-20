@@ -112,3 +112,10 @@ temp/
 .vscode-test
 .vscode/
 *.timestamp-*
+
+# Prisma
+/generated/prisma
+
+# Firebase credentials file 
+firebase-service-account.json
+config/firebase-service-account.json
