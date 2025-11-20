@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: dao/artista.dao.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: dao/artista.dao.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>/**
+ * @file artista.dao.js
+ * @description Acceso a datos (DAO) para gestionar la tabla `artista` y los usuarios
+ * que tienen el flag `esartista = true`.  
+ * 
+ * Incluye operaciones para obtener artistas, crear uno nuevo asociado a un usuario,
+ * actualizar sus datos y eliminarlo.
+ *
+ * @requires ../config/database.js
+ */
+
+import prisma from '../config/database.js';
+
+/**
+ * @namespace ArtistaDAO
+ * @description Métodos de acceso a datos para la entidad Artista.
+ */
+export const ArtistaDAO = {
+
+  /**
+   * Obtiene todos los usuarios que son artistas.
+   *
+   * @async
+   * @function findAll
+   * @memberof ArtistaDAO
+   *
+   * @returns {Promise&lt;Array&lt;object>>} Lista de usuarios artistas con datos extra.
+   *
+   * @example
+   * const artistas = await ArtistaDAO.findAll();
+   */
+  async findAll() {
+    return prisma.usuario.findMany({
+      where: { esartista: true },
+      include: { artista: true },
+    });
+  },
+
+  /**
+   * Obtiene un artista por su ID de usuario.
+   *
+   * @async
+   * @function findById
+   * @memberof ArtistaDAO
+   *
+   * @param {number} id - ID del usuario/artista.
+   *
+   * @returns {Promise&lt;object|null>} El usuario-artista encontrado o `null`.
+   *
+   * @example
+   * const artista = await ArtistaDAO.findById(12);
+   */
+  async findById(id) {
+    return prisma.usuario.findUnique({
+      where: { id, esartista: true },
+      include: { artista: true },
+    });
+  },
+
+  /**
+   * Crea un nuevo registro en la tabla `artista`.
+   * 
+   * El parámetro `data` puede incluir un objeto `genero` o un campo `idgenero`.
+   *
+   * @async
+   * @function create
+   * @memberof ArtistaDAO
+   *
+   * @param {Object} data - Datos del artista.
+   * @param {number} data.idusuario - ID del usuario asociado.
+   * @param {Object} [data.genero] - Objeto de género `{ idgenero }`.
+   * @param {number} [data.idgenero] - ID del género directamente.
+   * @param {PrismaClient} [tx=prisma] - Transacción opcional.
+   *
+   * @returns {Promise&lt;object>} Registro creado.
+   *
+   * @example
+   * await ArtistaDAO.create({ idusuario: 5, idgenero: 2 });
+   */
+  async create(data, tx = prisma) {
+    const { genero, ...rest } = data;
+    return tx.artista.create({
+      data: {
+        ...rest,
+        idgenero: genero?.idgenero ?? data.idgenero ?? null,
+      },
+    });
+  },
+
+  /**
+   * Actualiza los datos de un artista existente.
+   *
+   * Soporta tanto `genero.id` como `idgenero` directo.
+   *
+   * @async
+   * @function update
+   * @memberof ArtistaDAO
+   *
+   * @param {Object} data - Nuevos datos del artista.
+   * @param {number} data.idusuario - ID del usuario/artista.
+   * @param {Object} [data.genero] - Objeto de género `{ id }`.
+   * @param {number} [data.idgenero] - ID del género.
+   * @param {PrismaClient} [tx=prisma] - Transacción opcional.
+   *
+   * @returns {Promise&lt;object>} Registro actualizado.
+   *
+   * @example
+   * await ArtistaDAO.update({
+   *   idusuario: 5,
+   *   genero: { id: 3 },
+   *   valoracion: 4.9
+   * });
+   */
+  async update(data, tx = prisma) {
+    let { idusuario, genero, ...updateData } = data;
+
+    if (genero?.id) {
+      updateData.idgenero = genero.id;
+    } else if (data.idgenero) {
+      updateData.idgenero = data.idgenero;
+    }
+
+    return tx.artista.update({
+      where: { idusuario },
+      data: updateData,
+    });
+  },
+
+  /**
+   * Elimina un artista por su ID de usuario.
+   *
+   * @async
+   * @function delete
+   * @memberof ArtistaDAO
+   *
+   * @param {number} idusuario - ID del artista/usuario.
+   * @param {PrismaClient} [tx=prisma] - Transacción opcional.
+   *
+   * @returns {Promise&lt;object>} Registro eliminado.
+   *
+   * @example
+   * await ArtistaDAO.delete(12);
+   */
+  async delete(idusuario, tx = prisma) {
+    return tx.artista.delete({
+      where: { idusuario: Number(idusuario) },
+    });
+  },
+};
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Namespaces</h3><ul><li><a href="ArtistaDAO.html">ArtistaDAO</a></li><li><a href="CestaDAO.html">CestaDAO</a></li><li><a href="CompradoDAO.html">CompradoDAO</a></li><li><a href="DeseaDAO.html">DeseaDAO</a></li><li><a href="FavoritoDAO.html">FavoritoDAO</a></li><li><a href="UsuarioDAO.html">UsuarioDAO</a></li></ul><h3>Classes</h3><ul><li><a href="ArtistaDTO.html">ArtistaDTO</a></li><li><a href="CestaDTO.html">CestaDTO</a></li><li><a href="CestaItemDTO.html">CestaItemDTO</a></li><li><a href="ElementoDTO.html">ElementoDTO</a></li><li><a href="ErrorResponseDTO.html">ErrorResponseDTO</a></li><li><a href="GeneroDTO.html">GeneroDTO</a></li><li><a href="RelacionBaseDTO.html">RelacionBaseDTO</a></li><li><a href="UsuarioCestaElementoDTO.html">UsuarioCestaElementoDTO</a></li><li><a href="UsuarioDTO.html">UsuarioDTO</a></li><li><a href="UsuarioDeseaElementoDTO.html">UsuarioDeseaElementoDTO</a></li><li><a href="UsuarioFavoritoElementoDTO.html">UsuarioFavoritoElementoDTO</a></li><li><a href="UsuarioPublicDTO.html">UsuarioPublicDTO</a></li><li><a href="UsuarioTieneElementoDTO.html">UsuarioTieneElementoDTO</a></li></ul><h3>Global</h3><ul><li><a href="global.html#createComprados">createComprados</a></li><li><a href="global.html#createDeseado">createDeseado</a></li><li><a href="global.html#createFavorito">createFavorito</a></li><li><a href="global.html#createItemCesta">createItemCesta</a></li><li><a href="global.html#createUsuario">createUsuario</a></li><li><a href="global.html#deleteArt">deleteArt</a></li><li><a href="global.html#deleteCont">deleteCont</a></li><li><a href="global.html#deleteDeseado">deleteDeseado</a></li><li><a href="global.html#deleteItemCesta">deleteItemCesta</a></li><li><a href="global.html#deleteUsuario">deleteUsuario</a></li><li><a href="global.html#existArt">existArt</a></li><li><a href="global.html#existComprado">existComprado</a></li><li><a href="global.html#existCont">existCont</a></li><li><a href="global.html#existDeseado">existDeseado</a></li><li><a href="global.html#existItemCesta">existItemCesta</a></li><li><a href="global.html#exitComprado">exitComprado</a></li><li><a href="global.html#getArtistaById">getArtistaById</a></li><li><a href="global.html#getArtistas">getArtistas</a></li><li><a href="global.html#getCestaByUser">getCestaByUser</a></li><li><a href="global.html#getCompradosByIdUsuario">getCompradosByIdUsuario</a></li><li><a href="global.html#getDeseadosByUser">getDeseadosByUser</a></li><li><a href="global.html#getFavoritosByUser">getFavoritosByUser</a></li><li><a href="global.html#getLogin">getLogin</a></li><li><a href="global.html#getLogout">getLogout</a></li><li><a href="global.html#getUsuarioPubliById">getUsuarioPubliById</a></li><li><a href="global.html#getUsuarios">getUsuarios</a></li><li><a href="global.html#getUsuariosPubli">getUsuariosPubli</a></li><li><a href="global.html#listarUsuarios">listarUsuarios</a></li><li><a href="global.html#listarUsuariosPubli">listarUsuariosPubli</a></li><li><a href="global.html#listen">listen</a></li><li><a href="global.html#logout">logout</a></li><li><a href="global.html#obtenerUsuario">obtenerUsuario</a></li><li><a href="global.html#obtenerUsuarioPubli">obtenerUsuarioPubli</a></li><li><a href="global.html#separarDataUsuarioArtista">separarDataUsuarioArtista</a></li><li><a href="global.html#updateUsuario">updateUsuario</a></li><li><a href="global.html#verifyFirebaseToken">verifyFirebaseToken</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a> on Thu Nov 20 2025 11:31:06 GMT+0100 (hora estándar de Europa central)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

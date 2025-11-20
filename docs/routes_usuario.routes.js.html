@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: routes/usuario.routes.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: routes/usuario.routes.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>/**
+ * @file usuario.routes.js
+ * @description Define las rutas relacionadas con la gestión de usuarios.
+ * Algunas rutas requieren autenticación mediante Firebase JWT.
+ * 
+*/
+import { Router } from 'express';
+import { verifyFirebaseToken } from "../middlewares/authJWTFirebase.js";
+import { UsuarioController } from '../controllers/usuario.controller.js';
+
+const router = Router();
+
+/**
+ * @route GET /api/usuarios/login
+ * @description Obtiene los datos del usuario autenticado según el token JWT.
+ * Este endpoint valida el token enviado en la cabecera Authorization.
+ * @access Privado (requiere JWT Firebase)
+ * @returns {UsuarioDTO|ArtistaDTO|ErrorResponseDTO} Datos del usuario autenticado.
+ */
+router.get('/login', verifyFirebaseToken, UsuarioController.getLogin);  //Endpoint privado
+
+/**
+ * @route GET /api/usuarios/logout
+ * @description Realiza el cierre de sesión del usuario autenticado.
+ * @access Privado (requiere JWT Firebase)
+ * @returns {void|ErrorResponseDTO} Confirmación de cierre de sesión.
+ */
+router.get('/logout', verifyFirebaseToken, UsuarioController.getLogout);  //Endpoint privado
+
+/**
+ * @route DELETE /api/usuarios/:id
+ * @description Elimina un usuario según su ID. El ID debe coincidir con el usuario del token.
+ * @access Privado (requiere JWT Firebase)
+ * @param {number} id - ID del usuario a eliminar.
+ * @returns {void|ErrorResponseDTO} Sin contenido si la eliminación es correcta.
+ */
+router.delete('/:id', verifyFirebaseToken, UsuarioController.deleteUsuario);  //Endpoint privado
+
+/**
+ * @route GET /api/usuarios/:id
+ * @description Obtiene la información pública de un usuario según su ID.
+ * @access Público
+ * @param {number} id - ID del usuario.
+ * @returns {UsuarioPublicDTO|ErrorResponseDTO} Datos públicos del usuario.
+ */
+router.get('/:id', UsuarioController.getUsuarioPubliById); //Endpoint publico pruebas
+
+/**
+ * @route GET /api/usuarios/
+ * @description Obtiene la lista de usuarios públicos almacenados.
+ * @access Público
+ * @returns {Array&lt;UsuarioPublicDTO>|ErrorResponseDTO} Lista de usuarios.
+ */
+router.get('/', UsuarioController.getUsuariosPubli); //Endpoint publico pruebas
+
+/**
+ * @route POST /api/usuarios/
+ * @description Crea un nuevo usuario autenticado externamente y lo registra en la base de datos.
+ * @access Público
+ * @body {UsuarioDTO} Datos del usuario a registrar.
+ * @returns {UsuarioDTO|ArtistaDTO|ErrorResponseDTO} Usuario creado.
+ */
+router.post('/', UsuarioController.createUsuario);
+
+/**
+ * @route PUT /api/usuarios/
+ * @description Modifica los datos del usuario autenticado. El usuario se identifica mediante JWT.
+ * @access Privado (requiere JWT Firebase)
+ * @body {UsuarioDTO} Datos actualizados.
+ * @returns {UsuarioDTO|ArtistaDTO|ErrorResponseDTO} Usuario actualizado.
+ */
+router.put('/', verifyFirebaseToken, UsuarioController.updateUsuario);  //Endpoint privado
+
+export default router;
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Namespaces</h3><ul><li><a href="ArtistaDAO.html">ArtistaDAO</a></li><li><a href="CestaDAO.html">CestaDAO</a></li><li><a href="CompradoDAO.html">CompradoDAO</a></li><li><a href="DeseaDAO.html">DeseaDAO</a></li><li><a href="FavoritoDAO.html">FavoritoDAO</a></li><li><a href="UsuarioDAO.html">UsuarioDAO</a></li></ul><h3>Classes</h3><ul><li><a href="ArtistaDTO.html">ArtistaDTO</a></li><li><a href="CestaDTO.html">CestaDTO</a></li><li><a href="CestaItemDTO.html">CestaItemDTO</a></li><li><a href="ElementoDTO.html">ElementoDTO</a></li><li><a href="ErrorResponseDTO.html">ErrorResponseDTO</a></li><li><a href="GeneroDTO.html">GeneroDTO</a></li><li><a href="RelacionBaseDTO.html">RelacionBaseDTO</a></li><li><a href="UsuarioCestaElementoDTO.html">UsuarioCestaElementoDTO</a></li><li><a href="UsuarioDTO.html">UsuarioDTO</a></li><li><a href="UsuarioDeseaElementoDTO.html">UsuarioDeseaElementoDTO</a></li><li><a href="UsuarioFavoritoElementoDTO.html">UsuarioFavoritoElementoDTO</a></li><li><a href="UsuarioPublicDTO.html">UsuarioPublicDTO</a></li><li><a href="UsuarioTieneElementoDTO.html">UsuarioTieneElementoDTO</a></li></ul><h3>Global</h3><ul><li><a href="global.html#createComprados">createComprados</a></li><li><a href="global.html#createDeseado">createDeseado</a></li><li><a href="global.html#createFavorito">createFavorito</a></li><li><a href="global.html#createItemCesta">createItemCesta</a></li><li><a href="global.html#createUsuario">createUsuario</a></li><li><a href="global.html#deleteArt">deleteArt</a></li><li><a href="global.html#deleteCont">deleteCont</a></li><li><a href="global.html#deleteDeseado">deleteDeseado</a></li><li><a href="global.html#deleteItemCesta">deleteItemCesta</a></li><li><a href="global.html#deleteUsuario">deleteUsuario</a></li><li><a href="global.html#existArt">existArt</a></li><li><a href="global.html#existComprado">existComprado</a></li><li><a href="global.html#existCont">existCont</a></li><li><a href="global.html#existDeseado">existDeseado</a></li><li><a href="global.html#existItemCesta">existItemCesta</a></li><li><a href="global.html#exitComprado">exitComprado</a></li><li><a href="global.html#getArtistaById">getArtistaById</a></li><li><a href="global.html#getArtistas">getArtistas</a></li><li><a href="global.html#getCestaByUser">getCestaByUser</a></li><li><a href="global.html#getCompradosByIdUsuario">getCompradosByIdUsuario</a></li><li><a href="global.html#getDeseadosByUser">getDeseadosByUser</a></li><li><a href="global.html#getFavoritosByUser">getFavoritosByUser</a></li><li><a href="global.html#getLogin">getLogin</a></li><li><a href="global.html#getLogout">getLogout</a></li><li><a href="global.html#getUsuarioPubliById">getUsuarioPubliById</a></li><li><a href="global.html#getUsuarios">getUsuarios</a></li><li><a href="global.html#getUsuariosPubli">getUsuariosPubli</a></li><li><a href="global.html#listarUsuarios">listarUsuarios</a></li><li><a href="global.html#listarUsuariosPubli">listarUsuariosPubli</a></li><li><a href="global.html#listen">listen</a></li><li><a href="global.html#logout">logout</a></li><li><a href="global.html#obtenerUsuario">obtenerUsuario</a></li><li><a href="global.html#obtenerUsuarioPubli">obtenerUsuarioPubli</a></li><li><a href="global.html#separarDataUsuarioArtista">separarDataUsuarioArtista</a></li><li><a href="global.html#updateUsuario">updateUsuario</a></li><li><a href="global.html#verifyFirebaseToken">verifyFirebaseToken</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a> on Thu Nov 20 2025 11:31:06 GMT+0100 (hora estándar de Europa central)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

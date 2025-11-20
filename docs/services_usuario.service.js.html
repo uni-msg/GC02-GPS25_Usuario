@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: services/usuario.service.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: services/usuario.service.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>/**
+ * @file usuario.service.js
+ * @description Lógica de negocio para usuarios: listar, crear, obtener,
+ * actualizar y eliminar. Interactúa con DAOs, Firebase y APIs externas.
+ */
+
+import { UsuarioDAO } from '../dao/usuario.dao.js';
+import { ArtistaDAO } from '../dao/artista.dao.js';
+import { UsuarioDTO, UsuarioPublicDTO } from '../dto/usuario.dto.js';
+import { ArtistaDTO } from '../dto/artista.dto.js';
+import { ErrorResponseDTO } from '../dto/errorResponse.dto.js';
+import prisma from '../config/database.js';
+import { firebaseAdmin } from '../config/firebase.js';
+import { separarDataUsuarioArtista } from '../utils/separarDataUsuarioArtista.js';
+
+export const UsuarioService = {
+
+  /**
+   * Obtiene la lista de usuarios. Resuelve correctamente promesas anidadas con Promise.all.
+   * @async
+   * @function listarUsuarios
+   * @returns {Promise&lt;Array&lt;UsuarioDTO|ArtistaDTO>>}
+   * @throws {ErrorResponseDTO}
+   */
+  async listarUsuarios() {
+    try {
+      const usuarios = await UsuarioDAO.findAll();
+      if (!usuarios?.length) return [];
+
+      const elementos = await Promise.all(usuarios.map(async (user) => {
+        if (!user.esartista) return new UsuarioDTO(user);
+
+        // si es artista pero no tiene idgenero, devolvemos ArtistaDTO con genero null
+        if (!user.artista || !user.artista.idgenero) return new ArtistaDTO({ ...user, genero: null });
+
+        // obtener género desde microservicio de contenidos
+        const url = `${process.env.API_CONTENIDO}/generos/${user.artista.idgenero}`;
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`Error al obtener el género ${user.artista.idgenero}`);
+        const genero = await response.json();
+
+        return new ArtistaDTO({ ...user, genero });
+      }));
+
+      return elementos;
+    } catch (error) {
+      console.error(error);
+      throw new ErrorResponseDTO({ code: 500, message: 'Error interno al obtener la lista de usuarios.', path: '/usuarios' });
+    }
+  },
+
+  /**
+   * Crea un usuario y su artista asociado (si aplica) en una transacción.
+   * - Separa los datos de usuario y artista.
+   * - Crea en base de datos y en Firebase; en caso de fallo hace rollback en Firebase.
+   * @async
+   * @function createUsuario
+   * @param {Object} data
+   * @returns {Promise&lt;UsuarioDTO|ArtistaDTO>}
+   * @throws {ErrorResponseDTO}
+   */
+  async createUsuario(data) {
+    try {
+      const result = await prisma.$transaction(async (tx) => {
+        let firebaseUser = null;
+        try {
+          const [usuarioData, artistaData] = separarDataUsuarioArtista(data, !!data.esartista);
+
+          const usuario = await UsuarioDAO.create(usuarioData, tx);
+
+          let artista = null;
+          if (artistaData) {
+            artistaData.idusuario = usuario.id;
+            artista = await ArtistaDAO.create(artistaData, tx);
+          }
+
+          // crear usuario en Firebase con UID igual al id de la BD
+          firebaseUser = await firebaseAdmin.auth().createUser({
+            uid: String(usuario.id),
+            email: usuario.correo,
+            password: data.contrasenia,
+            displayName: usuario.nombreusuario,
+          });
+
+          if (artista) {
+            const userart = { ...usuario, ...artista, genero: data.genero ?? null };
+            return new ArtistaDTO(userart);
+          }
+
+          return new UsuarioDTO(usuario);
+        } catch (error) {
+          // limpiar en Firebase si se creó algo
+          if (firebaseUser) {
+            try { await firebaseAdmin.auth().deleteUser(firebaseUser.uid); } catch (cleanupError) { console.error('Error cleanup Firebase:', cleanupError); }
+          }
+          console.error('Error en creación de usuario:', error);
+          throw error; // será capturado por el catch externo y transformado
+        }
+      });
+
+      return result;
+    } catch (error) {
+      // si es un ErrorResponseDTO ya lanzado, propagarlo; si no, envolverlo
+      if (error instanceof ErrorResponseDTO) throw error;
+      throw new ErrorResponseDTO({ code: 500, message: 'Error al crear usuario en Firebase o Base de Datos.', path: '/usuarios' });
+    }
+  },
+
+  /**
+   * Obtiene un usuario completo por id (incluye datos de artista y género si aplica).
+   * @async
+   * @function obtenerUsuario
+   * @param {number} id
+   * @returns {Promise&lt;UsuarioDTO|ArtistaDTO|null>}
+   */
+  async obtenerUsuario(id) {
+    try {
+      const usuario = await UsuarioDAO.findById(id);
+      if (!usuario) return null;
+
+      if (!usuario.esartista) return new UsuarioDTO(usuario);
+
+      if (!usuario.artista || !usuario.artista.idgenero) return new ArtistaDTO({ ...usuario, genero: null });
+
+      const url = `${process.env.API_CONTENIDO}/generos/${usuario.artista.idgenero}`;
+      const response = await fetch(url);
+      if (!response.ok) throw new Error(`Error al obtener el género ${usuario.artista.idgenero}`);
+      const genero = await response.json();
+
+      return new ArtistaDTO({ ...usuario, genero });
+    } catch (error) {
+      console.error(error);
+      throw new ErrorResponseDTO({ code: 500, message: 'Error al obtener usuario.', path: `/usuarios/${id}` });
+    }
+  },
+
+  /**
+   * Logout: revoca tokens del usuario en Firebase.
+   * @async
+   * @function logout
+   * @param {string} uid
+   * @returns {Promise&lt;boolean>}
+   */
+  async logout(uid) {
+    try {
+      await firebaseAdmin.auth().revokeRefreshTokens(String(uid));
+      return true;
+    } catch (error) {
+      console.error(error);
+      throw new ErrorResponseDTO({ code: 500, message: 'Error al eliminar el token', path: `/usuarios/logout` });
+    }
+  },
+
+  /**
+   * Actualiza usuario y artista (si aplica).
+   * @async
+   * @function updateUsuario
+   * @param {Object} data
+   * @returns {Promise&lt;UsuarioDTO|ArtistaDTO|null>}
+   */
+  async updateUsuario(data) {
+    try {
+      const existArt = await ArtistaDAO.findById(data.id);
+      const [usuarioData, artistaData] = separarDataUsuarioArtista(data, !!existArt);
+
+      usuarioData.id = data.id;
+      const usuario = await UsuarioDAO.update(usuarioData);
+      if (!usuario) return null;
+
+      if (!existArt) return new UsuarioDTO(usuario);
+
+      if (artistaData) {
+        artistaData.idusuario = data.id;
+        await ArtistaDAO.update(artistaData);
+      }
+
+      const usuarioFinal = await UsuarioDAO.findById(data.id);
+      if (!usuarioFinal.artista || !usuarioFinal.artista.idgenero) {
+        return new ArtistaDTO({ ...usuarioFinal, genero: null });
+      }
+
+      const url = `${process.env.API_CONTENIDO}/generos/${usuarioFinal.artista.idgenero}`;
+      const response = await fetch(url);
+
+      if (!response.ok) {
+        throw new Error(`Error al obtener el género ${usuarioFinal.artista.idgenero}`);
+      }
+
+      const genero = await response.json();
+      return new ArtistaDTO({
+        ...usuarioFinal,
+        genero
+      });
+    } catch (error) {
+      console.error(error);
+      throw new ErrorResponseDTO({ code: 500, message: 'Error al actualizar usuario.', path: `/usuarios` });
+    }
+  },
+
+  /**
+   * Elimina un usuario y su registro en Firebase dentro de una transacción.
+   * @async
+   * @function deleteUsuario
+   * @param {number} id
+   * @returns {Promise&lt;UsuarioDTO>}
+   */
+  async deleteUsuario(id) {
+    try {
+      return await prisma.$transaction(async (tx) => {
+        let deletedUsuario = await UsuarioDAO.delete(id, tx);
+        if (!deletedUsuario) throw new ErrorResponseDTO({ code: 404, message: 'Usuario no encontrado', path: `/usuarios/${id}` });
+
+        try {
+          await firebaseAdmin.auth().deleteUser(String(deletedUsuario.id));
+        } catch (firebaseError) {
+          console.error('Error al eliminar usuario en Firebase:', firebaseError);
+          // Reintentar o decidir política: en este diseño hacemos rollback lanzando error
+          throw new Error('Error al eliminar usuario en Firebase');
+        }
+
+        return new UsuarioDTO(deletedUsuario);
+      });
+    } catch (error) {
+      console.error(error);
+      if (error instanceof ErrorResponseDTO) throw error;
+      throw new ErrorResponseDTO({ code: 500, message: 'Error al eliminar usuario en Firebase o Base de Datos', path: `/usuarios/${id}` });
+    }
+  },
+
+  /**
+   * Lista usuarios públicos (DTO que oculta campos sensibles).
+   * @async
+   * @function listarUsuariosPubli
+   * @returns {Promise&lt;Array&lt;UsuarioPublicDTO>>}
+   */
+  async listarUsuariosPubli() {
+    try {
+      const usuarios = await UsuarioDAO.findAll();
+      return usuarios.map(u => new UsuarioPublicDTO(u));
+    } catch (error) {
+      console.error(error);
+      throw new ErrorResponseDTO({ code: 500, message: 'Error al listar usuarios públicos', path: '/usuarios' });
+    }
+  },
+
+  /**
+   * Obtiene la información pública de un usuario por id.
+   * @async
+   * @function obtenerUsuarioPubli
+   * @param {number} id
+   * @returns {Promise&lt;UsuarioPublicDTO|null>}
+   */
+  async obtenerUsuarioPubli(id) {
+    try {
+      const usuario = await UsuarioDAO.findById(id);
+      if (!usuario) return null;
+      return new UsuarioPublicDTO(usuario);
+    } catch (error) {
+      console.error(error);
+      throw new ErrorResponseDTO({ code: 500, message: 'Error al obtener usuario público', path: `/usuarios/${id}` });
+    }
+  },
+
+};
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Namespaces</h3><ul><li><a href="ArtistaDAO.html">ArtistaDAO</a></li><li><a href="CestaDAO.html">CestaDAO</a></li><li><a href="CompradoDAO.html">CompradoDAO</a></li><li><a href="DeseaDAO.html">DeseaDAO</a></li><li><a href="FavoritoDAO.html">FavoritoDAO</a></li><li><a href="UsuarioDAO.html">UsuarioDAO</a></li></ul><h3>Classes</h3><ul><li><a href="ArtistaDTO.html">ArtistaDTO</a></li><li><a href="CestaDTO.html">CestaDTO</a></li><li><a href="CestaItemDTO.html">CestaItemDTO</a></li><li><a href="ElementoDTO.html">ElementoDTO</a></li><li><a href="ErrorResponseDTO.html">ErrorResponseDTO</a></li><li><a href="GeneroDTO.html">GeneroDTO</a></li><li><a href="RelacionBaseDTO.html">RelacionBaseDTO</a></li><li><a href="UsuarioCestaElementoDTO.html">UsuarioCestaElementoDTO</a></li><li><a href="UsuarioDTO.html">UsuarioDTO</a></li><li><a href="UsuarioDeseaElementoDTO.html">UsuarioDeseaElementoDTO</a></li><li><a href="UsuarioFavoritoElementoDTO.html">UsuarioFavoritoElementoDTO</a></li><li><a href="UsuarioPublicDTO.html">UsuarioPublicDTO</a></li><li><a href="UsuarioTieneElementoDTO.html">UsuarioTieneElementoDTO</a></li></ul><h3>Global</h3><ul><li><a href="global.html#createComprados">createComprados</a></li><li><a href="global.html#createDeseado">createDeseado</a></li><li><a href="global.html#createFavorito">createFavorito</a></li><li><a href="global.html#createItemCesta">createItemCesta</a></li><li><a href="global.html#createUsuario">createUsuario</a></li><li><a href="global.html#deleteArt">deleteArt</a></li><li><a href="global.html#deleteCont">deleteCont</a></li><li><a href="global.html#deleteDeseado">deleteDeseado</a></li><li><a href="global.html#deleteItemCesta">deleteItemCesta</a></li><li><a href="global.html#deleteUsuario">deleteUsuario</a></li><li><a href="global.html#existArt">existArt</a></li><li><a href="global.html#existComprado">existComprado</a></li><li><a href="global.html#existCont">existCont</a></li><li><a href="global.html#existDeseado">existDeseado</a></li><li><a href="global.html#existItemCesta">existItemCesta</a></li><li><a href="global.html#exitComprado">exitComprado</a></li><li><a href="global.html#getArtistaById">getArtistaById</a></li><li><a href="global.html#getArtistas">getArtistas</a></li><li><a href="global.html#getCestaByUser">getCestaByUser</a></li><li><a href="global.html#getCompradosByIdUsuario">getCompradosByIdUsuario</a></li><li><a href="global.html#getDeseadosByUser">getDeseadosByUser</a></li><li><a href="global.html#getFavoritosByUser">getFavoritosByUser</a></li><li><a href="global.html#getLogin">getLogin</a></li><li><a href="global.html#getLogout">getLogout</a></li><li><a href="global.html#getUsuarioPubliById">getUsuarioPubliById</a></li><li><a href="global.html#getUsuarios">getUsuarios</a></li><li><a href="global.html#getUsuariosPubli">getUsuariosPubli</a></li><li><a href="global.html#listarUsuarios">listarUsuarios</a></li><li><a href="global.html#listarUsuariosPubli">listarUsuariosPubli</a></li><li><a href="global.html#listen">listen</a></li><li><a href="global.html#logout">logout</a></li><li><a href="global.html#obtenerUsuario">obtenerUsuario</a></li><li><a href="global.html#obtenerUsuarioPubli">obtenerUsuarioPubli</a></li><li><a href="global.html#separarDataUsuarioArtista">separarDataUsuarioArtista</a></li><li><a href="global.html#updateUsuario">updateUsuario</a></li><li><a href="global.html#verifyFirebaseToken">verifyFirebaseToken</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a> on Thu Nov 20 2025 11:31:06 GMT+0100 (hora estándar de Europa central)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

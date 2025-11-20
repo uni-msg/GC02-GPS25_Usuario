@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: controllers/cesta.controller.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: controllers/cesta.controller.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>/**
+ * @file cesta.controller.js
+ * @description Controlador para la gestión de la cesta de compra del usuario.
+ * Expone los endpoints definidos en la capa de rutas y delega la lógica de negocio en CestaService.
+ */
+
+import { CestaService } from '../services/cesta.service.js';
+import { ErrorResponseDTO } from '../dto/errorResponse.dto.js';
+
+export const CestaController = {
+
+  /**
+   * Obtiene todos los elementos de la cesta del usuario.
+   *
+   * @async
+   * @function getCestaByUser
+   * @route GET /cesta/:idusuario
+   * @description Devuelve la cesta completa del usuario, incluyendo los elementos y el total calculado.
+   * Combina información de la base de datos con datos del servicio de Contenido.
+   *
+   * @param {import('express').Request} req - Petición HTTP.
+   * @param {import('express').Response} res - Respuesta HTTP.
+   *
+   * @returns {Promise&lt;CestaDTO|ErrorResponseDTO>}
+   *
+   * @response 200 - Cesta del usuario, incluso si está vacía.
+   * @response 401 - Token inválido o no autorizado (middleware previo).
+   * @response 403 - ID de parámetros no coincide con el usuario autenticado (middleware previo).
+   * @response 500 - Error interno del servidor.
+   */
+  async getCestaByUser(req, res) {
+    try {
+      const idusuario = parseInt(req.params.idusuario);
+      const data = await CestaService.getCestaByUser(idusuario);
+      res.status(200).json(data);
+    } catch (error) {
+      console.error(error);
+
+      if (error instanceof ErrorResponseDTO) {
+        return res.status(error.code).json(error);
+      }
+
+      res.status(500).json(
+        new ErrorResponseDTO({
+          code: 500,
+          message: `Error interno al obtener la cesta del usuario.`,
+          path: req.originalUrl,
+        })
+      );
+    }
+  },
+
+  /**
+   * Crea una nueva relación usuario-elemento dentro de la cesta.
+   *
+   * @async
+   * @function createItemCesta
+   * @route POST /cesta
+   * @description Añade un elemento a la cesta del usuario.  
+   * Si ya existe → 409 conflicto.
+   *
+   * @param {import('express').Request} req - Cuerpo: { idusuario, idelemento, tipo }
+   * @param {import('express').Response} res
+   *
+   * @returns {Promise&lt;UsuarioCestaElementoDTO|ErrorResponseDTO>}
+   *
+   * @response 201 - Elemento añadido correctamente.
+   * @response 400 - Datos incompletos o inválidos.
+   * @response 401 - Token inválido (middleware previo).
+   * @response 403 - ID no coincide con el usuario autenticado (middleware previo).
+   * @response 409 - El elemento ya estaba en la cesta.
+   * @response 500 - Error interno del servidor.
+   */
+  async createItemCesta(req, res) {
+    try {
+      const { idusuario, idelemento } = req.body;
+
+      // Validación previa (Swagger indica error 400)
+      if (!idusuario || !idelemento) {
+        return res.status(400).json(
+          new ErrorResponseDTO({
+            code: 400,
+            message: "Solicitud inválida o faltan campos requeridos.",
+            path: req.originalUrl,
+          })
+        );
+      }
+
+      const data = await CestaService.createItemCesta(req.body);
+
+      res.status(201)
+        .location(`/api/usuarios/cesta/${idusuario}/${idelemento}`)
+        .json(data);
+
+    } catch (error) {
+      console.error(error);
+
+      if (error instanceof ErrorResponseDTO) {
+        return res.status(error.code).json(error);
+      }
+
+      if (error.message?.includes("ya está en la cesta")) {
+        return res.status(409).json(
+          new ErrorResponseDTO({
+            code: 409,
+            message: "El elemento ya está presente en la cesta del usuario.",
+            path: req.originalUrl,
+          })
+        );
+      }
+
+      res.status(500).json(
+        new ErrorResponseDTO({
+          code: 500,
+          message: `Error interno al crear el elemento de la cesta.`,
+          path: req.originalUrl,
+        })
+      );
+    }
+  },
+
+  /**
+   * Verifica si un elemento está en la cesta del usuario.
+   *
+   * @async
+   * @function existItemCesta
+   * @route GET /cesta/:idusuario/:idelemento
+   * @description Comprueba si un usuario ha añadido un elemento a su cesta.
+   *
+   * @param {import('express').Request} req
+   * @param {import('express').Response} res
+   *
+   * @returns {Promise&lt;boolean|ErrorResponseDTO>}
+   *
+   * @response 200 - Devuelve `{ isInCesta: boolean }`.
+   * @response 401 - Token inválido (middleware previo).
+   * @response 403 - ID no coincide con el usuario autenticado (middleware previo).
+   * @response 500 - Error interno del servidor.
+   */
+  async existItemCesta(req, res) {
+    try {
+      const idusuario = parseInt(req.params.idusuario);
+      const idelemento = parseInt(req.params.idelemento);
+
+      const isInCesta = await CestaService.existItemCesta(idusuario, idelemento);
+
+      res.status(200).json({ isInCesta });
+
+    } catch (error) {
+      console.error(error);
+
+      if (error instanceof ErrorResponseDTO) {
+        return res.status(error.code).json(error);
+      }
+
+      res.status(500).json(
+        new ErrorResponseDTO({
+          code: 500,
+          message: `Error interno al verificar el estado del elemento en la cesta.`,
+          path: req.originalUrl,
+        })
+      );
+    }
+  },
+
+  /**
+   * Elimina un elemento de la cesta del usuario.
+   *
+   * @async
+   * @function deleteItemCesta
+   * @route DELETE /cesta/:idusuario/:idelemento
+   * @description Elimina la relación si existe.  
+   * Si elimina correctamente → 204 sin contenido.
+   *
+   * @param {import('express').Request} req
+   * @param {import('express').Response} res
+   *
+   * @returns {Promise&lt;void|ErrorResponseDTO>}
+   *
+   * @response 204 - Eliminado correctamente.
+   * @response 401 - Token inválido (middleware previo).
+   * @response 403 - ID no coincide con el usuario autenticado (middleware previo).
+   * @response 404 - El elemento no existe en la cesta.
+   * @response 500 - Error interno del servidor.
+   */
+  async deleteItemCesta(req, res) {
+    try {
+      const idusuario = parseInt(req.params.idusuario);
+      const idelemento = parseInt(req.params.idelemento);
+
+      const eliminado = await CestaService.deleteItemCesta(idusuario, idelemento);
+
+      if (!eliminado) {
+        return res.status(404).json(
+          new ErrorResponseDTO({
+            code: 404,
+            message: `Elemento o usuario no encontrado en la cesta.`,
+            path: req.originalUrl,
+          })
+        );
+      }
+
+      res.status(204).end();
+
+    } catch (error) {
+      console.error(error);
+
+      if (error instanceof ErrorResponseDTO) {
+        return res.status(error.code).json(error);
+      }
+
+      res.status(500).json(
+        new ErrorResponseDTO({
+          code: 500,
+          message: `Error interno al eliminar el elemento de la cesta.`,
+          path: req.originalUrl,
+        })
+      );
+    }
+  },
+
+};
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Namespaces</h3><ul><li><a href="ArtistaDAO.html">ArtistaDAO</a></li><li><a href="CestaDAO.html">CestaDAO</a></li><li><a href="CompradoDAO.html">CompradoDAO</a></li><li><a href="DeseaDAO.html">DeseaDAO</a></li><li><a href="FavoritoDAO.html">FavoritoDAO</a></li><li><a href="UsuarioDAO.html">UsuarioDAO</a></li></ul><h3>Classes</h3><ul><li><a href="ArtistaDTO.html">ArtistaDTO</a></li><li><a href="CestaDTO.html">CestaDTO</a></li><li><a href="CestaItemDTO.html">CestaItemDTO</a></li><li><a href="ElementoDTO.html">ElementoDTO</a></li><li><a href="ErrorResponseDTO.html">ErrorResponseDTO</a></li><li><a href="GeneroDTO.html">GeneroDTO</a></li><li><a href="RelacionBaseDTO.html">RelacionBaseDTO</a></li><li><a href="UsuarioCestaElementoDTO.html">UsuarioCestaElementoDTO</a></li><li><a href="UsuarioDTO.html">UsuarioDTO</a></li><li><a href="UsuarioDeseaElementoDTO.html">UsuarioDeseaElementoDTO</a></li><li><a href="UsuarioFavoritoElementoDTO.html">UsuarioFavoritoElementoDTO</a></li><li><a href="UsuarioPublicDTO.html">UsuarioPublicDTO</a></li><li><a href="UsuarioTieneElementoDTO.html">UsuarioTieneElementoDTO</a></li></ul><h3>Global</h3><ul><li><a href="global.html#createComprados">createComprados</a></li><li><a href="global.html#createDeseado">createDeseado</a></li><li><a href="global.html#createFavorito">createFavorito</a></li><li><a href="global.html#createItemCesta">createItemCesta</a></li><li><a href="global.html#createUsuario">createUsuario</a></li><li><a href="global.html#deleteArt">deleteArt</a></li><li><a href="global.html#deleteCont">deleteCont</a></li><li><a href="global.html#deleteDeseado">deleteDeseado</a></li><li><a href="global.html#deleteItemCesta">deleteItemCesta</a></li><li><a href="global.html#deleteUsuario">deleteUsuario</a></li><li><a href="global.html#existArt">existArt</a></li><li><a href="global.html#existComprado">existComprado</a></li><li><a href="global.html#existCont">existCont</a></li><li><a href="global.html#existDeseado">existDeseado</a></li><li><a href="global.html#existItemCesta">existItemCesta</a></li><li><a href="global.html#exitComprado">exitComprado</a></li><li><a href="global.html#getArtistaById">getArtistaById</a></li><li><a href="global.html#getArtistas">getArtistas</a></li><li><a href="global.html#getCestaByUser">getCestaByUser</a></li><li><a href="global.html#getCompradosByIdUsuario">getCompradosByIdUsuario</a></li><li><a href="global.html#getDeseadosByUser">getDeseadosByUser</a></li><li><a href="global.html#getFavoritosByUser">getFavoritosByUser</a></li><li><a href="global.html#getLogin">getLogin</a></li><li><a href="global.html#getLogout">getLogout</a></li><li><a href="global.html#getUsuarioPubliById">getUsuarioPubliById</a></li><li><a href="global.html#getUsuarios">getUsuarios</a></li><li><a href="global.html#getUsuariosPubli">getUsuariosPubli</a></li><li><a href="global.html#listarUsuarios">listarUsuarios</a></li><li><a href="global.html#listarUsuariosPubli">listarUsuariosPubli</a></li><li><a href="global.html#listen">listen</a></li><li><a href="global.html#logout">logout</a></li><li><a href="global.html#obtenerUsuario">obtenerUsuario</a></li><li><a href="global.html#obtenerUsuarioPubli">obtenerUsuarioPubli</a></li><li><a href="global.html#separarDataUsuarioArtista">separarDataUsuarioArtista</a></li><li><a href="global.html#updateUsuario">updateUsuario</a></li><li><a href="global.html#verifyFirebaseToken">verifyFirebaseToken</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc/jsdoc">JSDoc 4.0.5</a> on Thu Nov 20 2025 11:31:06 GMT+0100 (hora estándar de Europa central)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>
