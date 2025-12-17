@@ -5,6 +5,7 @@
  * y registrar todas las rutas de la API relacionadas con usuarios.
  */
 import express from 'express';
+import cors from 'cors';
 import dotenv from 'dotenv';
 import swaggerUi from "swagger-ui-express";
 import swaggerDocument from "./config/swagger.js";
@@ -20,6 +21,17 @@ import compradoRoutes from './routes/comprado.routes.js';
 dotenv.config(); // Cargamos las variables
 
 const app = express();
+
+const allowedOrigins = [
+  process.env.PORT_CORS || "http://localhost:3333",
+  "http://127.0.0.1:3333"
+];
+
+app.use(cors({
+  origin: allowedOrigins,
+  credentials: true
+}));
+
 
 console.log('DB URL:', process.env.DATABASE_URL); //ver que base de datos emplea
 

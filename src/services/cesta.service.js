@@ -47,7 +47,7 @@ export const CestaService = {
           const data = await response.json();
 
           return new CestaItemDTO({
-            idelemento: data.idelemento,
+            idelemento: elem.idelemento,
             nombre: data.nombre,
             precio: parseFloat(data.precio.toFixed(2)),
             rutaimagen: data.urlFoto ?? null,
